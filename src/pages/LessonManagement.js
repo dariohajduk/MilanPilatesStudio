@@ -1,72 +1,106 @@
 import React, { useState } from 'react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 const LessonManagement = ({ addLesson }) => {
-  const [newLesson, setNewLesson] = useState({ date: '', hour: '', trainerName: '', maxParticipants: '', type: '' });
+  const [lesson, setLesson] = useState({
+    date: '',
+    hour: '',
+    numberOfPersons: '',
+    trainType: '',
+    trainerName: '',
+  });
 
-  const handleAddLesson = () => {
-    if (newLesson.date && newLesson.hour && newLesson.trainerName && newLesson.maxParticipants && newLesson.type) {
-      addLesson(newLesson);
-      setNewLesson({ date: '', hour: '', trainerName: '', maxParticipants: '', type: '' });
-    } else {
-      alert('אנא מלא את כל השדות עבור השיעור החדש.');
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setLesson((prevLesson) => ({ ...prevLesson, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const docRef = await addDoc(collection(db, 'Lessons'), lesson);
+      console.log('Lesson added with ID:', docRef.id);
+      addLesson({ id: docRef.id, ...lesson });
+      setLesson({
+        date: '',
+        hour: '',
+        numberOfPersons: '',
+        trainType: '',
+        trainerName: '',
+      });
+    } catch (error) {
+      console.error('Error adding lesson:', error);
+      alert('שגיאה בהוספת שיעור.');
     }
   };
 
   return (
-    <div className="lesson-management p-8">
-      <h1 className="text-3xl font-bold mb-6">ניהול שיעורים</h1>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">תאריך</label>
-            <input
-              type="date"
-              value={newLesson.date}
-              onChange={(e) => setNewLesson({ ...newLesson, date: e.target.value })}
-              className="w-full border border-gray-300 rounded p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">שעה</label>
-            <input
-              type="time"
-              value={newLesson.hour}
-              onChange={(e) => setNewLesson({ ...newLesson, hour: e.target.value })}
-              className="w-full border border-gray-300 rounded p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">שם המדריך</label>
-            <input
-              type="text"
-              value={newLesson.trainerName}
-              onChange={(e) => setNewLesson({ ...newLesson, trainerName: e.target.value })}
-              className="w-full border border-gray-300 rounded p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">כמות מקסימלית של משתתפים</label>
-            <input
-              type="number"
-              value={newLesson.maxParticipants}
-              onChange={(e) => setNewLesson({ ...newLesson, maxParticipants: e.target.value })}
-              className="w-full border border-gray-300 rounded p-2"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">סוג האימון</label>
-            <input
-              type="text"
-              value={newLesson.type}
-              onChange={(e) => setNewLesson({ ...newLesson, type: e.target.value })}
-              className="w-full border border-gray-300 rounded p-2"
-            />
-          </div>
-          <button onClick={handleAddLesson} className="w-full bg-blue-600 text-white rounded p-2 hover:bg-blue-700">
-            הוסף שיעור
-          </button>
+    <div className="lesson-management container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">ניהול שיעורים</h1>
+      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">תאריך</label>
+          <input
+            type="date"
+            name="date"
+            value={lesson.date}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          />
         </div>
-      </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">שעה</label>
+          <input
+            type="time"
+            name="hour"
+            value={lesson.hour}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">מספר משתתפים</label>
+          <input
+            type="number"
+            name="numberOfPersons"
+            value={lesson.numberOfPersons}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">סוג אימון</label>
+          <input
+            type="text"
+            name="trainType"
+            value={lesson.trainType}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-gray-700 text-sm font-bold mb-2">שם המדריך</label>
+          <input
+            type="text"
+            name="trainerName"
+            value={lesson.trainerName}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          />
+        </div>
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          הוסף שיעור
+        </button>
+      </form>
     </div>
   );
 };

@@ -6,13 +6,14 @@ import ProfileScreen from './pages/ProfileScreen';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import LessonManagement from './pages/LessonManagement';
+import './index.css';
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [currentScreen, setCurrentScreen] = useState('login');
   const [registeredUsers, setRegisteredUsers] = useState([
-    { phone: '1234567890', isAdmin: true, name: 'Admin User', totalLessons: 10 },
-    { phone: '0987654321', isAdmin: false, name: 'Regular User', totalLessons: 5 },
+    { phone: '1234567890', isAdmin: true, name: 'Admin User', registeredLessons: [] },
+    { phone: '0987654321', isAdmin: false, name: 'Regular User', registeredLessons: [] },
   ]);
   const [lessons, setLessons] = useState([]);
   const [logo, setLogo] = useState(null);
@@ -21,6 +22,11 @@ const App = () => {
   const handleLogout = () => {
     setUser(null);
     setCurrentScreen('login');
+  };
+
+  const handleLogin = (user) => {
+    setUser(user);
+    setCurrentScreen('home');
   };
 
   const addUser = (newUser) => {
@@ -39,16 +45,19 @@ const App = () => {
     setRegisteredUsers((prevUsers) =>
       prevUsers.map((user) => (user.phone === updatedUser.phone ? updatedUser : user))
     );
-    if (user.phone === updatedUser.phone) {
+    if (user?.phone === updatedUser.phone) {
       setUser(updatedUser);
     }
   };
 
   const registerForLesson = (lesson) => {
+    if (!user) return;
+
     const updatedUser = {
       ...user,
       registeredLessons: [...(user.registeredLessons || []), lesson],
     };
+
     updateUser(updatedUser);
   };
 
@@ -59,119 +68,145 @@ const App = () => {
         (l) => l.date !== lesson.date || l.hour !== lesson.hour
       ),
     };
+
     updateUser(updatedUser);
   };
 
-  const NavigationBar = () => {
-    return (
-      <nav className="bg-gray-800 p-4 text-white flex justify-between items-center">
-        <button onClick={() => setMenuOpen(!menuOpen)} className="text-white focus:outline-none">
-          ☰
-        </button>
-      </nav>
-    );
-  };
-
-  const SideMenu = () => {
-    return (
-      <div className={`fixed inset-0 bg-gray-800 bg-opacity-75 z-50 ${menuOpen ? 'block' : 'hidden'}`}>
-        <div className="fixed inset-y-0 right-0 w-64 bg-white shadow-lg p-4">
-          <button onClick={() => setMenuOpen(false)} className="text-gray-800 focus:outline-none">
-            ✕
-          </button>
-          {logo && <img src={logo} alt="Logo" className="h-20 mx-auto my-4" />}
-          <ul className="mt-4 space-y-4">
-            {user?.isAdmin && (
-              <>
-                <li>
-                  <button onClick={() => { setCurrentScreen('home'); setMenuOpen(false); }} className="hover:text-gray-400">דף הבית</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('admin'); setMenuOpen(false); }} className="hover:text-gray-400">לוח ניהול</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('schedule'); setMenuOpen(false); }} className="hover:text-gray-400">לוח זמנים</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('profile'); setMenuOpen(false); }} className="hover:text-gray-400">פרופיל</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('userManagement'); setMenuOpen(false); }} className="hover:text-gray-400">ניהול משתמשים</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('lessonManagement'); setMenuOpen(false); }} className="hover:text-gray-400">ניהול שיעורים</button>
-                </li>
-              </>
-            )}
-            {!user?.isAdmin && (
-              <>
-                <li>
-                  <button onClick={() => { setCurrentScreen('home'); setMenuOpen(false); }} className="hover:text-gray-400">דף הבית</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('schedule'); setMenuOpen(false); }} className="hover:text-gray-400">לוח זמנים</button>
-                </li>
-                <li>
-                  <button onClick={() => { setCurrentScreen('profile'); setMenuOpen(false); }} className="hover:text-gray-400">פרופיל</button>
-                </li>
-              </>
-            )}
-            <li>
-              <button onClick={handleLogout} className="hover:text-gray-400">התנתק</button>
-            </li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
-
-  // Main App Layout
   return (
     <div className="relative min-h-screen bg-gray-100" dir="rtl">
-      {user && <NavigationBar />}
-      {user && <SideMenu />}
+      {user && (
+        <nav className="bg-gray-800 text-white p-4 flex justify-between items-center">
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="text-white text-2xl focus:outline-none"
+          >
+            ☰
+          </button>
+          <h1 className="text-xl font-bold">האפליקציה שלי</h1>
+        </nav>
+      )}
+      {menuOpen && (
+        <div className={`fixed inset-0 bg-gray-800 bg-opacity-75 z-50`}>
+          <div className="fixed inset-y-0 right-0 w-64 bg-white shadow-lg p-4">
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="text-gray-800 text-xl focus:outline-none"
+            >
+              ✕
+            </button>
+            <ul className="mt-4 space-y-4">
+              <li>
+                <button
+                  onClick={() => {
+                    setCurrentScreen('home');
+                    setMenuOpen(false);
+                  }}
+                  className="text-gray-800 hover:text-gray-500"
+                >
+                  דף הבית
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setCurrentScreen('schedule');
+                    setMenuOpen(false);
+                  }}
+                  className="text-gray-800 hover:text-gray-500"
+                >
+                  לוח זמנים
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setCurrentScreen('profile');
+                    setMenuOpen(false);
+                  }}
+                  className="text-gray-800 hover:text-gray-500"
+                >
+                  פרופיל
+                </button>
+              </li>
+              {user?.isAdmin && (
+                <>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setCurrentScreen('admin');
+                        setMenuOpen(false);
+                      }}
+                      className="text-gray-800 hover:text-gray-500"
+                    >
+                      לוח ניהול
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setCurrentScreen('userManagement');
+                        setMenuOpen(false);
+                      }}
+                      className="text-gray-800 hover:text-gray-500"
+                    >
+                      ניהול משתמשים
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => {
+                        setCurrentScreen('lessonManagement');
+                        setMenuOpen(false);
+                      }}
+                      className="text-gray-800 hover:text-gray-500"
+                    >
+                      ניהול שיעורים
+                    </button>
+                  </li>
+                </>
+              )}
+              <li>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-800 hover:text-gray-500"
+                >
+                  התנתק
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
       <div className="container mx-auto p-4">
         {currentScreen === 'login' && (
           <LoginScreen
             registeredUsers={registeredUsers}
-            setUser={setUser}
+            setUser={handleLogin}
             setCurrentScreen={setCurrentScreen}
           />
         )}
-        {currentScreen === 'home' && (
-          <Home
-            user={user}
-            lessons={lessons}
-            logo={logo}
-          />
-        )}
+        {currentScreen === 'home' && <Home user={user} lessons={lessons} logo={logo} />}
         {currentScreen === 'schedule' && (
           <Schedule
+            userId={user?.phone}
             lessons={lessons}
-            user={user}
             registerForLesson={registerForLesson}
             unregisterFromLesson={unregisterFromLesson}
           />
         )}
         {currentScreen === 'profile' && (
-          <ProfileScreen
-            user={user}
-            updateUser={updateUser}
-            unregisterFromLesson={unregisterFromLesson}
-          />
+          <ProfileScreen user={user} unregisterFromLesson={unregisterFromLesson} />
         )}
-        {currentScreen === 'admin' && user?.isAdmin && (
-          <AdminDashboard setCurrentScreen={setCurrentScreen} setLogo={setLogo} />
-        )}
-        {currentScreen === 'userManagement' && user?.isAdmin && (
+        {currentScreen === 'admin' && <AdminDashboard setCurrentScreen={setCurrentScreen} />}
+        {currentScreen === 'userManagement' && (
           <UserManagement
             registeredUsers={registeredUsers}
             addUser={addUser}
             deleteUser={deleteUser}
           />
         )}
-        {currentScreen === 'lessonManagement' && user?.isAdmin && (
-          <LessonManagement addLesson={addLesson} />
+        {currentScreen === 'lessonManagement' && (
+          <LessonManagement lessons={lessons} addLesson={addLesson} />
         )}
       </div>
     </div>

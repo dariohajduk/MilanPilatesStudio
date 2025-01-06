@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 
 const LoginForm = ({ registeredUsers, setUser, setCurrentScreen }) => {
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    const user = registeredUsers.find((user) => user.phone === phone);
+    if (!Array.isArray(registeredUsers) || registeredUsers.length === 0) {
+      alert('לא נמצאו משתמשים רשומים.');
+      return;
+    }
+
+    const user = registeredUsers.find((u) => u.phone === phone);
     if (user) {
       setUser(user);
       setCurrentScreen('home');
@@ -24,15 +28,6 @@ const LoginForm = ({ registeredUsers, setUser, setCurrentScreen }) => {
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className="w-full border border-gray-300 rounded p-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">סיסמה</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             className="w-full border border-gray-300 rounded p-2"
           />
         </div>

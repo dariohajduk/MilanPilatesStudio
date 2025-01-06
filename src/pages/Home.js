@@ -9,13 +9,29 @@ const Home = ({ user, lessons, logo }) => {
     return 'לילה טוב';
   };
 
-  const futureLessons = lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) > new Date()).slice(0, 3);
-  const completedLessonsCount = lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) < new Date()).length;
+  const futureLessons = Array.isArray(lessons)
+    ? lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) > new Date()).slice(0, 3)
+    : [];
+
+  const completedLessonsCount = Array.isArray(lessons)
+    ? lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) < new Date()).length
+    : 0;
 
   return (
     <div className="home p-8 text-center">
-      {logo && <img src={logo} alt="Logo" className="mx-auto mb-6 opacity-50" style={{ width: '200px', height: '200px' }} />}
-      <h1 className="text-3xl font-bold mb-4">{getGreeting()}, {user?.name}</h1>
+      {logo && (
+        <img
+          src={logo}
+          alt="Logo"
+          className="mx-auto mb-6 opacity-50"
+          style={{ width: '200px', height: '200px' }}
+        />
+      )}
+
+      <h1 className="text-3xl font-bold mb-4">
+        {getGreeting()}, {user?.name}
+      </h1>
+
       <h2 className="text-2xl font-bold mb-6">השיעורים הקרובים שלך</h2>
       <ul className="space-y-4">
         {futureLessons.length > 0 ? (
@@ -31,7 +47,10 @@ const Home = ({ user, lessons, logo }) => {
           <p>אין שיעורים קרובים.</p>
         )}
       </ul>
-      <h2 className="text-2xl font-bold mt-8">כמות השיעורים שבוצעה עד היום: {completedLessonsCount}</h2>
+
+      <h2 className="text-2xl font-bold mt-8">
+        כמות השיעורים שבוצעה עד היום: {completedLessonsCount}
+      </h2>
     </div>
   );
 };
