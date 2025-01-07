@@ -195,7 +195,10 @@ const App = () => {
           />
         )}
         {currentScreen === 'profile' && (
-          <ProfileScreen user={user} unregisterFromLesson={unregisterFromLesson} />
+          <ProfileScreen 
+           user={user}
+           unregisterFromLesson={unregisterFromLesson}
+         />
         )}
         {currentScreen === 'admin' && <AdminDashboard setCurrentScreen={setCurrentScreen} />}
         {currentScreen === 'userManagement' && (
