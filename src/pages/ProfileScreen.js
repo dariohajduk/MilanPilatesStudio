@@ -1,80 +1,90 @@
-import React, { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { useUser } from '../contexts/UserContext';
 import { db } from '../firebase';
+import { getDoc, doc } from 'firebase/firestore';
 
-const ProfileScreen = ({ user, unregisterFromLesson }) => {
+const ProfileScreen = () => {
+  const { userData } = useUser(); // Access the logged-in user's data
   const [registeredLessons, setRegisteredLessons] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRegisteredLessons = async () => {
-      if (!user?.phone) return;
+    if (userData?.phone) {
+      fetchRegisteredLessons();
+    }
+  }, [userData]);
 
-      try {
-        const userRef = doc(db, 'Users', user.phone);
-        const userDoc = await getDoc(userRef);
+  const fetchRegisteredLessons = async () => {
+    try {
+      const userRef = doc(db, 'Users', userData.phone); // Reference to the user's document
+      const userSnap = await getDoc(userRef);
 
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (Array.isArray(userData.lessons)) {
-            const lessonsData = await Promise.all(
-              userData.lessons.map(async (lessonId) => {
-                const lessonRef = doc(db, 'Lessons', lessonId);
-                const lessonDoc = await getDoc(lessonRef);
-                if (lessonDoc.exists()) {
-                  return { id: lessonId, ...lessonDoc.data() };
-                }
-                return null;
-              })
-            );
-            setRegisteredLessons(lessonsData.filter((lesson) => lesson !== null));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching registered lessons:', error);
+      if (userSnap.exists()) {
+        const userLessons = userSnap.data().registeredLessons || []; // Fetch registeredLessons
+        setRegisteredLessons(userLessons); // Update state with the lessons
       }
-    };
-
-    fetchRegisteredLessons();
-  }, [user]);
-
-  const isCancelable = (lesson) => {
-    const lessonDate = new Date(`${lesson.date}T${lesson.hour}`);
-    const now = new Date();
-    const oneDayInMillis = 24 * 60 * 60 * 1000;
-    return lessonDate - now > oneDayInMillis;
+    } catch (error) {
+      console.error('Error fetching registered lessons:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  if (!userData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">טוען...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="profile-screen p-8">
-      <h1 className="text-3xl font-bold mb-6">פרופיל</h1>
-      <div className="bg-white p-6 rounded-lg shadow">
-        <p className="text-xl mb-4"><strong>שם מלא:</strong> {user?.name}</p>
-        <p className="text-xl mb-4"><strong>מספר טלפון:</strong> {user?.phone}</p>
-        <p className="text-xl mb-4"><strong>סוג משתמש:</strong> {user?.isAdmin ? 'מנהל' : 'משתמש'}</p>
-        <h2 className="text-2xl font-bold mb-4">שיעורים שנרשמתי אליהם</h2>
-        <ul className="space-y-4">
-          {registeredLessons.length > 0 ? (
-            registeredLessons.map((lesson) => (
-              <li key={lesson.id} className="border-b pb-2">
-                <p><strong>תאריך:</strong> {lesson.date}</p>
-                <p><strong>שעה:</strong> {lesson.hour}</p>
-                <p><strong>סוג:</strong> {lesson.trainType}</p>
-                <p><strong>שם המדריך:</strong> {lesson.trainerName}</p>
-                <button
-                  onClick={() => unregisterFromLesson(lesson.id)}
-                  disabled={!isCancelable(lesson)}
-                  className={`bg-red-600 text-white px-4 py-2 rounded ${
-                    !isCancelable(lesson) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-700'
-                  }`}
-                >
-                  בטל שיעור
-                </button>
-              </li>
-            ))
-          ) : (
-            <p>לא נרשמת לשום שיעור.</p>
-          )}
-        </ul>
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
+      {/* User Information */}
+      <div className="bg-white rounded-lg p-6 shadow-sm">
+        <h1 className="text-2xl font-bold mb-6">פרופיל משתמש</h1>
+        <div className="space-y-4">
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+            <span className="text-gray-600 ml-2">👤</span>
+            <span className="text-gray-600">שם: </span>
+            <span className="font-medium mr-2">{userData.name}</span>
+          </div>
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+            <span className="text-gray-600 ml-2">📱</span>
+            <span className="text-gray-600">טלפון: </span>
+            <span className="font-medium mr-2" dir="ltr">{userData.phone}</span>
+          </div>
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+            <span className="text-gray-600 ml-2">🛡️</span>
+            <span className="text-gray-600">סוג משתמש: </span>
+            <span className="font-medium mr-2">{userData.isAdmin ? 'מנהל' : 'משתמש רגיל'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Registered Lessons */}
+      <div className="bg-white rounded-lg p-6 shadow-sm">
+        <h2 className="text-xl font-bold mb-4">השיעורים שנרשמת אליהם</h2>
+        {isLoading ? (
+          <p className="text-center text-gray-500 py-4">טוען שיעורים...</p>
+        ) : registeredLessons.length > 0 ? (
+          <div className="space-y-4">
+            {registeredLessons.map((lesson, index) => (
+              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg">{lesson.title || `${lesson.type} - ${lesson.instructor}`}</h3>
+                  <p className="text-gray-600">מדריך: {lesson.instructor}</p>
+                  <p className="text-gray-600">תאריך: {lesson.date}</p>
+                  <p className="text-gray-600">שעה: {lesson.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-gray-500 py-4">
+            לא נרשמת לשום שיעור
+          </p>
+        )}
       </div>
     </div>
   );

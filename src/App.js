@@ -1,218 +1,162 @@
-import React, { useState } from 'react';
-import LoginScreen from './pages/LoginForm';
+import React, { useState, useEffect } from 'react';
+import { UserProvider, useUser } from './contexts/UserContext';
+import LoginForm from './pages/LoginForm';
 import Home from './pages/Home';
 import Schedule from './pages/Schedule';
 import ProfileScreen from './pages/ProfileScreen';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import LessonManagement from './pages/LessonManagement';
+import TopNav from './components/TopNav';
 import './index.css';
 
-const App = () => {
-  const [user, setUser] = useState(null);
+const AppContent = () => {
   const [currentScreen, setCurrentScreen] = useState('login');
-  const [registeredUsers, setRegisteredUsers] = useState([
-    { phone: '1234567890', isAdmin: true, name: 'Admin User', registeredLessons: [] },
-    { phone: '0987654321', isAdmin: false, name: 'Regular User', registeredLessons: [] },
-  ]);
-  const [lessons, setLessons] = useState([]);
-  const [logo, setLogo] = useState(null);
+  const { isLoggedIn, userData, logout } = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [registeredUsers, setRegisteredUsers] = useState([]);
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentScreen('login');
-  };
-
-  const handleLogin = (user) => {
-    setUser(user);
-    setCurrentScreen('home');
-  };
-
-  const addUser = (newUser) => {
-    setRegisteredUsers((prevUsers) => [...prevUsers, newUser]);
+  const addUser = (user) => {
+    setRegisteredUsers([...registeredUsers, user]);
   };
 
   const deleteUser = (phone) => {
-    setRegisteredUsers((prevUsers) => prevUsers.filter((user) => user.phone !== phone));
+    setRegisteredUsers(registeredUsers.filter(user => user.phone !== phone));
   };
 
-  const addLesson = (newLesson) => {
-    setLessons((prevLessons) => [...prevLessons, newLesson]);
+  const screenComponents = {
+    home: <Home user={userData} lessons={userData?.registeredLessons || []} />,
+    schedule: <Schedule />,
+    profile: <ProfileScreen />,
+    admin: userData?.isAdmin ? <AdminDashboard setCurrentScreen={setCurrentScreen} /> : null,
+    lessons: userData?.isAdmin ? <LessonManagement /> : null,
+    users: userData?.isAdmin ? <UserManagement registeredUsers={registeredUsers} addUser={addUser} deleteUser={deleteUser} /> : null,
+    settings: userData?.isAdmin ? <AdminDashboard setCurrentScreen={setCurrentScreen} activeTab="settings" /> : null,
   };
 
-  const updateUser = (updatedUser) => {
-    setRegisteredUsers((prevUsers) =>
-      prevUsers.map((user) => (user.phone === updatedUser.phone ? updatedUser : user))
-    );
-    if (user?.phone === updatedUser.phone) {
-      setUser(updatedUser);
-    }
-  };
-
-  const registerForLesson = (lesson) => {
-    if (!user) return;
-
-    const updatedUser = {
-      ...user,
-      registeredLessons: [...(user.registeredLessons || []), lesson],
-    };
-
-    updateUser(updatedUser);
-  };
-
-  const unregisterFromLesson = (lesson) => {
-    const updatedUser = {
-      ...user,
-      registeredLessons: user.registeredLessons.filter(
-        (l) => l.date !== lesson.date || l.hour !== lesson.hour
-      ),
-    };
-
-    updateUser(updatedUser);
-  };
+  useEffect(() => {
+    console.log('המסך הנוכחי:', currentScreen);
+    console.log('isLoggedIn:', isLoggedIn);
+    console.log('userData:', userData);
+  }, [currentScreen, isLoggedIn, userData]);
 
   return (
     <div className="relative min-h-screen bg-gray-100" dir="rtl">
-      {user && (
-        <nav className="bg-gray-800 text-white p-4 flex justify-between items-center">
-          <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="text-white text-2xl focus:outline-none"
-          >
-            ☰
-          </button>
-          <h1 className="text-xl font-bold">האפליקציה שלי</h1>
-        </nav>
+      {isLoggedIn && (
+        <TopNav
+          setCurrentScreen={setCurrentScreen}
+          currentScreen={currentScreen}
+          handleLogout={logout}
+          userData={userData}
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+        />
       )}
-      {menuOpen && (
-        <div className={`fixed inset-0 bg-gray-800 bg-opacity-75 z-50`}>
+
+      {menuOpen && isLoggedIn && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 z-50 md:hidden">
           <div className="fixed inset-y-0 right-0 w-64 bg-white shadow-lg p-4">
             <button
               onClick={() => setMenuOpen(false)}
-              className="text-gray-800 text-xl focus:outline-none"
+              className="absolute top-4 right-4 text-gray-800 text-xl"
             >
               ✕
             </button>
-            <ul className="mt-4 space-y-4">
-              <li>
-                <button
-                  onClick={() => {
-                    setCurrentScreen('home');
-                    setMenuOpen(false);
-                  }}
-                  className="text-gray-800 hover:text-gray-500"
-                >
-                  דף הבית
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setCurrentScreen('schedule');
-                    setMenuOpen(false);
-                  }}
-                  className="text-gray-800 hover:text-gray-500"
-                >
-                  לוח זמנים
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setCurrentScreen('profile');
-                    setMenuOpen(false);
-                  }}
-                  className="text-gray-800 hover:text-gray-500"
-                >
-                  פרופיל
-                </button>
-              </li>
-              {user?.isAdmin && (
+            <div className="mt-12 space-y-4">
+              <button
+                onClick={() => {
+                  setCurrentScreen('home');
+                  setMenuOpen(false);
+                }}
+                className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+              >
+                דף הבית
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentScreen('schedule');
+                  setMenuOpen(false);
+                }}
+                className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+              >
+                לוח שיעורים
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentScreen('profile');
+                  setMenuOpen(false);
+                }}
+                className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+              >
+                פרופיל
+              </button>
+              {userData?.isAdmin && (
                 <>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setCurrentScreen('admin');
-                        setMenuOpen(false);
-                      }}
-                      className="text-gray-800 hover:text-gray-500"
-                    >
-                      לוח ניהול
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setCurrentScreen('userManagement');
-                        setMenuOpen(false);
-                      }}
-                      className="text-gray-800 hover:text-gray-500"
-                    >
-                      ניהול משתמשים
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      onClick={() => {
-                        setCurrentScreen('lessonManagement');
-                        setMenuOpen(false);
-                      }}
-                      className="text-gray-800 hover:text-gray-500"
-                    >
-                      ניהול שיעורים
-                    </button>
-                  </li>
+                  <button
+                    onClick={() => {
+                      setCurrentScreen('admin');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  >
+                    ניהול
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentScreen('users');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  >
+                    ניהול משתמשים
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentScreen('lessons');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  >
+                    ניהול שיעורים
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentScreen('settings');
+                      setMenuOpen(false);
+                    }}
+                    className="w-full text-right px-4 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  >
+                    הגדרות
+                  </button>
                 </>
               )}
-              <li>
-                <button
-                  onClick={handleLogout}
-                  className="text-gray-800 hover:text-gray-500"
-                >
-                  התנתק
-                </button>
-              </li>
-            </ul>
+              <button
+                onClick={logout}
+                className="w-full text-right px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+              >
+                התנתק
+              </button>
+            </div>
           </div>
         </div>
       )}
-      <div className="container mx-auto p-4">
-        {currentScreen === 'login' && (
-          <LoginScreen
-            registeredUsers={registeredUsers}
-            setUser={handleLogin}
-            setCurrentScreen={setCurrentScreen}
-          />
+
+      <main className="container mx-auto p-4">
+        {!isLoggedIn ? (
+          <LoginForm setCurrentScreen={setCurrentScreen} />
+        ) : (
+          screenComponents[currentScreen] || <Home />
         )}
-        {currentScreen === 'home' && <Home user={user} lessons={lessons} logo={logo} />}
-        {currentScreen === 'schedule' && (
-          <Schedule
-            userId={user?.phone}
-            lessons={lessons}
-            registerForLesson={registerForLesson}
-            unregisterFromLesson={unregisterFromLesson}
-          />
-        )}
-        {currentScreen === 'profile' && (
-          <ProfileScreen 
-           user={user}
-           unregisterFromLesson={unregisterFromLesson}
-         />
-        )}
-        {currentScreen === 'admin' && <AdminDashboard setCurrentScreen={setCurrentScreen} />}
-        {currentScreen === 'userManagement' && (
-          <UserManagement
-            registeredUsers={registeredUsers}
-            addUser={addUser}
-            deleteUser={deleteUser}
-          />
-        )}
-        {currentScreen === 'lessonManagement' && (
-          <LessonManagement lessons={lessons} addLesson={addLesson} />
-        )}
-      </div>
+      </main>
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 };
 

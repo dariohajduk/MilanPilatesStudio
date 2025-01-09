@@ -1,56 +1,89 @@
+// src/pages/Home.js
 import React from 'react';
+import { useUser } from '../contexts/UserContext';
+import { useLogo } from '../contexts/LogoContext'; // Import your LogoContext
 
-const Home = ({ user, lessons, logo }) => {
+const Home = () => {
+  const { userData } = useUser();
+ const { logoUrl } = useLogo(); // Get logoUrl from context
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'בוקר טוב';
-    if (hour < 18) return 'צהריים טובים';
+    if (hour < 17) return 'צהריים טובים';
     if (hour < 21) return 'ערב טוב';
     return 'לילה טוב';
   };
 
-  const futureLessons = Array.isArray(lessons)
-    ? lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) > new Date()).slice(0, 3)
-    : [];
-
-  const completedLessonsCount = Array.isArray(lessons)
-    ? lessons.filter(lesson => new Date(`${lesson.date}T${lesson.hour}`) < new Date()).length
-    : 0;
-
   return (
-    <div className="home p-8 text-center">
-      {logo && (
-        <img
-          src={logo}
-          alt="Logo"
-          className="mx-auto mb-6 opacity-50"
-          style={{ width: '200px', height: '200px' }}
-        />
-      )}
+    <div className="space-y-6">
+      {/* כותרת וברכה */}
+      <div className="text-center bg-white rounded-lg p-8 shadow-sm">
+      <div className="logo-container">
+      <img
+          src={logoUrl || '/default-logo.png'}
+          alt="Studio Logo"
+          className="logo"
+      />
+</div>  
+        <h1 className="text-2xl font-bold text-gray-800">
+          {getGreeting()}, {userData?.name}
+        </h1>
+        <p className="text-gray-600 mt-2">
+          ברוכים הבאים למערכת השיעורים של Milan Pilates
+        </p>
+      </div>
 
-      <h1 className="text-3xl font-bold mb-4">
-        {getGreeting()}, {user?.name}
-      </h1>
+      {/* קופסאות מידע */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* שיעורים קרובים */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">השיעורים הקרובים שלך</h2>
+          {userData?.registeredLessons?.length > 0 ? (
+            <ul className="space-y-3">
+              {userData.registeredLessons.map((lesson, index) => (
+                <li key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span>{lesson.time}</span>
+                  <span className="text-gray-600">{lesson.title}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 text-center py-4">
+              אין שיעורים קרובים
+            </p>
+          )}
+        </div>
 
-      <h2 className="text-2xl font-bold mb-6">השיעורים הקרובים שלך</h2>
-      <ul className="space-y-4">
-        {futureLessons.length > 0 ? (
-          futureLessons.map((lesson, index) => (
-            <li key={index} className="bg-white p-4 rounded-lg shadow">
-              <p><strong>תאריך:</strong> {lesson.date}</p>
-              <p><strong>שעה:</strong> {lesson.hour}</p>
-              <p><strong>סוג:</strong> {lesson.type}</p>
-              <p><strong>שם המדריך:</strong> {lesson.trainerName}</p>
-            </li>
-          ))
-        ) : (
-          <p>אין שיעורים קרובים.</p>
-        )}
-      </ul>
+        {/* סטטיסטיקות */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">סטטיסטיקות</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">שיעורים שהשתתפת</span>
+              <span className="font-semibold">{userData?.completedLessons || 0}</span>
+            </div>
+            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">שיעורים רשומים</span>
+              <span className="font-semibold">{userData?.registeredLessons?.length || 0}</span>
+            </div>
+          </div>
+        </div>
 
-      <h2 className="text-2xl font-bold mt-8">
-        כמות השיעורים שבוצעה עד היום: {completedLessonsCount}
-      </h2>
+        {/* פרטי מנוי */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4">פרטי מנוי</h2>
+          <div className="space-y-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">סוג מנוי: </span>
+              <span className="font-semibold">{userData?.membershipType || 'רגיל'}</span>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <span className="text-gray-600">תאריך הצטרפות: </span>
+              <span className="font-semibold">{userData?.joinDate || 'לא זמין'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

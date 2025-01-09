@@ -1,3 +1,61 @@
+/* src/index.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  /* הגדרות בסיסיות */
+  body {
+    @apply text-gray-800;
+  }
+
+  /* כותרות */
+  h1 {
+    @apply text-3xl font-bold;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold;
+  }
+
+  /* כפתורים */
+  .btn {
+    @apply px-4 py-2 rounded-lg transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-500 text-white 
+           hover:from-blue-700 hover:to-blue-600;
+  }
+
+  /* כרטיסים */
+  .card {
+    @apply bg-white rounded-lg shadow-sm p-6;
+  }
+  .logo-container {
+    display: flex;            /* Enable Flexbox */
+    justify-content: center;  /* Center horizontally */
+    align-items: center;      /* Center vertically */
+    height: 300px;            /* Increase container height */
+    width: 300px;             /* Increase container width */
+    margin: 0 auto;           /* Center the container itself if needed */
+    background-color: #f9f9f9; /* Optional: Add a background color to the container */
+    border: 1px solid #ccc;    /* Optional: Add a border */
+    border-radius: 12px;       /* Optional: Add rounded corners */
+  }
+  
+  .logo {
+    max-width: 100%;          /* Ensure the logo fits inside the container */
+    max-height: 100%;         /* Maintain aspect ratio */
+    object-fit: contain;      /* Prevent stretching or cropping */
+  }
+  
+  
+  @media (max-width: 768px) {
+    .logo {
+      width: 120px; /* Slightly smaller for mobile screens */
+      max-height: 50px; /* Reduce height for smaller nav bars */
+    }
+  }
+
+}
