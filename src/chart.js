@@ -1,34 +1,77 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import { Line, Bar, Pie } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-const data = {
-  labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-  datasets: [
-    {
-      label: 'Dataset 1',
-      data: [65, 59, 80, 81, 56, 55, 40],
-      backgroundColor: 'rgba(75,192,192,0.4)',
-    },
-  ],
-};
-
-const options = {
+// Common chart options
+const commonOptions = {
   responsive: true,
+  maintainAspectRatio: false,
   plugins: {
     legend: {
       position: 'top',
     },
-    title: {
-      display: true,
-      text: 'Chart.js Bar Chart',
+    tooltip: {
+      mode: 'index',
+      intersect: false,
     },
   },
 };
 
-function MyChart() {
-  return <Bar data={data} options={options} />;
-}
+// Line chart specific options
+export const lineOptions = {
+  ...commonOptions,
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Number of Registrations'
+      }
+    },
+    x: {
+      title: {
+        display: true,
+        text: 'Month'
+      }
+    }
+  }
+};
 
-export default MyChart;
+// Bar chart specific options
+export const barOptions = {
+  ...commonOptions,
+  scales: {
+    y: {
+      beginAtZero: true,
+      title: {
+        display: true,
+        text: 'Number of Users'
+      }
+    }
+  }
+};
+
+// Pie chart specific options
+export const pieOptions = {
+  ...commonOptions,
+  plugins: {
+    ...commonOptions.plugins,
+    legend: {
+      position: 'right',
+    }
+  }
+};
+
+export { Line, Bar, Pie };

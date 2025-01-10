@@ -19,15 +19,27 @@ const Schedule = () => {
   const fetchClasses = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, 'Lessons'));
-      const lessonsData = querySnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          dateTime: moment(`${data.date} ${data.time}`, 'YYYY-MM-DD HH:mm').toDate(),
-        };
-      });
-      setClasses(lessonsData);
+      const now = new Date();
+      const lessonsData = await Promise.all(
+        querySnapshot.docs.map(async (docSnapshot) => {
+          const data = docSnapshot.data();
+          const lessonDateTime = moment(`${data.date} ${data.time}`, 'YYYY-MM-DD HH:mm').toDate();
+
+          // Update isActive to false if the lesson has passed
+          if (lessonDateTime < now && data.isActive) {
+            const lessonRef = doc(db, 'Lessons', docSnapshot.id);
+            await updateDoc(lessonRef, { isActive: false });
+          }
+
+          return {
+            id: docSnapshot.id,
+            ...data,
+            dateTime: lessonDateTime,
+          };
+        })
+      );
+
+      setClasses(lessonsData.filter((lesson) => lesson.isActive === true));
     } catch (error) {
       console.error('Error fetching classes:', error);
     } finally {
@@ -44,13 +56,11 @@ const Schedule = () => {
     try {
       const lessonRef = doc(db, 'Lessons', lesson.id);
 
-      // Update the waiting list in the lesson
       await updateDoc(lessonRef, {
         waitingList: arrayUnion(userData.phone),
-        registeredParticipants: lesson.registeredParticipants + 1, // Increment registered count
+        registeredParticipants: lesson.registeredParticipants + 1,
       });
 
-      // Update the user's profile in Firebase
       const userRef = doc(db, 'Users', userData.phone);
       await updateDoc(userRef, {
         registeredLessons: arrayUnion({
@@ -62,7 +72,6 @@ const Schedule = () => {
         }),
       });
 
-      // Update local state for dynamic UI changes
       setClasses((prev) =>
         prev.map((l) =>
           l.id === lesson.id
@@ -105,13 +114,11 @@ const Schedule = () => {
     try {
       const lessonRef = doc(db, 'Lessons', lesson.id);
 
-      // Update the waiting list in the lesson
       await updateDoc(lessonRef, {
         waitingList: arrayRemove(userData.phone),
-        registeredParticipants: lesson.registeredParticipants - 1, // Decrement registered count
+        registeredParticipants: lesson.registeredParticipants - 1,
       });
 
-      // Update the user's profile in Firebase
       const userRef = doc(db, 'Users', userData.phone);
       await updateDoc(userRef, {
         registeredLessons: arrayRemove({
@@ -123,7 +130,6 @@ const Schedule = () => {
         }),
       });
 
-      // Update local state for dynamic UI changes
       setClasses((prev) =>
         prev.map((l) =>
           l.id === lesson.id
@@ -150,7 +156,6 @@ const Schedule = () => {
     }
   };
 
-  // Group lessons by date
   const lessonsByDate = classes.reduce((acc, lesson) => {
     const date = lesson.date;
     if (!acc[date]) {
@@ -173,7 +178,6 @@ const Schedule = () => {
               <div className="grid grid-cols-1 gap-4">
                 {lessonsByDate[date].map((lesson) => {
                   const isRegistered = lesson.waitingList.includes(userData?.phone);
-
                   return (
                     <div
                       key={lesson.id}

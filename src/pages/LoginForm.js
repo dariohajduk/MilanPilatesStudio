@@ -58,6 +58,7 @@ const LoginForm = ({ setCurrentScreen }) => {
       const userDoc = await getDoc(userRef);
 
       if (userDoc.exists()) {
+        
         const userData = {
           phone,
           ...userDoc.data(),

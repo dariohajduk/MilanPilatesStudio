@@ -20,6 +20,12 @@ export const LessonsProvider = ({ children }) => {
     };
     fetchLessons();
   }, []);
+  const filteredLessons = lessons.filter(lesson => {
+    const lessonDate = new Date(lesson.date);
+    const currentDate = new Date();
+    return lessonDate >= currentDate;
+  });
+  
 
   // Add a lesson to Firebase
   const addLesson = async (lesson) => {
