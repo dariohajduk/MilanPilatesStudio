@@ -5,7 +5,9 @@ import { useLogo } from '../contexts/LogoContext'; // Import your LogoContext
 
 const Home = () => {
   const { userData } = useUser();
- const { logoUrl } = useLogo(); // Get logoUrl from context
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const { logoUrl } = useLogo(); // Get logoUrl from context
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'בוקר טוב';
@@ -41,6 +43,7 @@ const Home = () => {
           {userData?.registeredLessons?.length > 0 ? (
             <ul className="space-y-3">
               {userData.registeredLessons.map((lesson, index) => (
+               new Date(lesson.date) <= today ?"":
                 <li key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span>{lesson.time}</span>
                   <span className="text-gray-600">{lesson.title}</span>

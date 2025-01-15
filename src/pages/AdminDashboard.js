@@ -4,6 +4,8 @@ import { collection, getDocs, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useLogo } from '../contexts/LogoContext';
 import moment from 'moment';
 import { Line, Pie, Bar } from 'react-chartjs-2';
+import LessonManagement from './LessonManagement';
+import UserManagement from './UserManagement';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +16,7 @@ import {
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from 'chart.js';
 
 // Register ChartJS components
@@ -27,7 +29,7 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 // Helper function to detect screen size
@@ -83,7 +85,10 @@ const AdminDashboard = ({ setCurrentScreen }) => {
       let activeLessons = 0;
 
       lessons.forEach((lesson) => {
-        const lessonDateTime = moment(`${lesson.date} ${lesson.time}`, 'YYYY-MM-DD HH:mm');
+        const lessonDateTime = moment(
+          `${lesson.date} ${lesson.time}`,
+          'YYYY-MM-DD HH:mm',
+        );
         if (lessonDateTime.isSameOrAfter(currentWeekStart)) {
           weeklyRegistrations += lesson.registeredParticipants || 0;
         }
@@ -113,13 +118,13 @@ const AdminDashboard = ({ setCurrentScreen }) => {
       const lessons = lessonsSnapshot.docs.map((doc) => doc.data());
 
       const monthlyData = {};
-      const lastFourMonths = [...Array(4)].map((_, i) => 
-        moment().subtract(i, 'months').format('MMMM')
-      ).reverse();
+      const lastFourMonths = [...Array(4)]
+        .map((_, i) => moment().subtract(i, 'months').format('MMMM'))
+        .reverse();
 
-      lastFourMonths.forEach(month => monthlyData[month] = 0);
+      lastFourMonths.forEach((month) => (monthlyData[month] = 0));
 
-      lessons.forEach(lesson => {
+      lessons.forEach((lesson) => {
         const monthName = moment(lesson.date, 'YYYY-MM-DD').format('MMMM');
         if (monthlyData[monthName] !== undefined) {
           monthlyData[monthName] += lesson.registeredParticipants || 0;
@@ -128,13 +133,15 @@ const AdminDashboard = ({ setCurrentScreen }) => {
 
       setChartData({
         labels: Object.keys(monthlyData),
-        datasets: [{
-          label: 'הרשמות חודשיות',
-          data: Object.values(monthlyData),
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.5)',
-          tension: 0.1
-        }]
+        datasets: [
+          {
+            label: 'הרשמות חודשיות',
+            data: Object.values(monthlyData),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            tension: 0.1,
+          },
+        ],
       });
     } catch (error) {
       console.error('Error loading chart data:', error);
@@ -156,18 +163,20 @@ const AdminDashboard = ({ setCurrentScreen }) => {
 
       setPieChartData({
         labels: Object.keys(membershipData),
-        datasets: [{
-          label: 'סוגי מנויים',
-          data: Object.values(membershipData),
-          backgroundColor: [
-            'rgba(255, 99, 132, 0.6)',
-            'rgba(54, 162, 235, 0.6)',
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(75, 192, 192, 0.6)',
-            'rgba(153, 102, 255, 0.6)'
-          ],
-          borderWidth: 1
-        }]
+        datasets: [
+          {
+            label: 'סוגי מנויים',
+            data: Object.values(membershipData),
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.6)',
+              'rgba(54, 162, 235, 0.6)',
+              'rgba(255, 206, 86, 0.6)',
+              'rgba(75, 192, 192, 0.6)',
+              'rgba(153, 102, 255, 0.6)',
+            ],
+            borderWidth: 1,
+          },
+        ],
       });
     } catch (error) {
       console.error('Error loading pie chart data:', error);
@@ -180,13 +189,13 @@ const AdminDashboard = ({ setCurrentScreen }) => {
       const users = usersSnapshot.docs.map((doc) => doc.data());
 
       const monthlyData = {};
-      const lastFourMonths = [...Array(4)].map((_, i) => 
-        moment().subtract(i, 'months').format('MMMM')
-      ).reverse();
+      const lastFourMonths = [...Array(4)]
+        .map((_, i) => moment().subtract(i, 'months').format('MMMM'))
+        .reverse();
 
-      lastFourMonths.forEach(month => monthlyData[month] = 0);
+      lastFourMonths.forEach((month) => (monthlyData[month] = 0));
 
-      users.forEach(user => {
+      users.forEach((user) => {
         const monthName = moment(user.joinDate, 'YYYY-MM-DD').format('MMMM');
         if (monthlyData[monthName] !== undefined) {
           monthlyData[monthName]++;
@@ -195,11 +204,13 @@ const AdminDashboard = ({ setCurrentScreen }) => {
 
       setBarChartData({
         labels: Object.keys(monthlyData),
-        datasets: [{
-          label: 'משתמשים חדשים',
-          data: Object.values(monthlyData),
-          backgroundColor: 'rgba(54, 162, 235, 0.6)'
-        }]
+        datasets: [
+          {
+            label: 'משתמשים חדשים',
+            data: Object.values(monthlyData),
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          },
+        ],
       });
     } catch (error) {
       console.error('Error loading bar chart data:', error);
@@ -244,21 +255,110 @@ const AdminDashboard = ({ setCurrentScreen }) => {
     { id: 'users', label: 'ניהול משתמשים', icon: '👥' },
     { id: 'lessons', label: 'ניהול שיעורים', icon: '📅' },
   ];
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold">לוח בקרה</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">סטטיסטיקות מהירות</h2>
+                {isLoading ? (
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h-10 bg-gray-200 rounded"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">שיעורים פעילים</span>
+                      <span className="font-semibold">{stats?.activeLessons || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">נרשמים השבוע</span>
+                      <span className="font-semibold">{stats?.weeklyRegistrations || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">נרשמים החודש</span>
+                      <span className="font-semibold">{stats?.monthlyRegistrations || 0}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">מגמת הרשמות</h2>
+                <div className="h-64">
+                  {chartData && <Line data={chartData} options={chartOptions} />}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">התפלגות סוגי מנויים</h2>
+                <div className="h-64">
+                  {pieChartData && <Pie data={pieChartData} options={chartOptions} />}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">משתמשים חדשים</h2>
+                <div className="h-64">
+                  {barChartData && <Bar data={barChartData} options={chartOptions} />}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">העלאת לוגו</h2>
+                <input
+                  type="file"
+                  onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+                />
+              </div>
+              </div>
+          </div>
+        );
+      case 'users':
+        return <UserManagement />;
+      case 'lessons':
+        return <LessonManagement />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {isMobile ? (
-        <div className="flex flex-col h-full">
-          <div className="bg-white p-4 shadow-md">
-            <h1 className="text-lg font-bold text-center">ניהול מערכת</h1>
-          </div>
+    <div className="flex">
+      <div className="bg-white shadow-lg w-full">
+        <div className="p-4 border-b">
+          <h1 className="text-xl font-bold">ניהול מערכת</h1>
         </div>
-      ) : (
-        <div className="flex h-screen bg-gray-100">
-          {/* Desktop View */}
-          <div className="w-64"> תפריט צד ותוכן נשמר. </div>
-        </div>
-      )}
+        <nav className="p-4 flex">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveSection(item.id);              
+               
+              }}
+              className={`flex items-center p-3 mx-2 rounded-lg transition-colors
+                ${activeSection === item.id
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="mr-3">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="flex-1 p-8 overflow-auto">
+          {renderContent()}
+      </div>
+      </div>
+     
     </div>
   );
 };

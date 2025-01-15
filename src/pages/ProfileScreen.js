@@ -7,6 +7,8 @@ const ProfileScreen = () => {
   const { userData } = useUser(); // Access the logged-in user's data
   const [registeredLessons, setRegisteredLessons] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const today = new Date();
+
 
   useEffect(() => {
     if (userData?.phone) {
@@ -68,8 +70,10 @@ const ProfileScreen = () => {
         {isLoading ? (
           <p className="text-center text-gray-500 py-4">טוען שיעורים...</p>
         ) : registeredLessons.length > 0 ? (
+          
           <div className="space-y-4">
             {registeredLessons.map((lesson, index) => (
+              new Date(lesson.date) <= today ?"":
               <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
                 <div className="flex-1">
                   <h3 className="font-bold text-lg">{lesson.title || `${lesson.type} - ${lesson.instructor}`}</h3>
