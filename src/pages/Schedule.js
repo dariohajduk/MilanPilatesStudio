@@ -10,7 +10,7 @@ moment.locale('he');
 const Schedule = () => {
   const [classes, setClasses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { userData, updateUserData } = useUser();
+  const { userData, updateUserData, refreshUserData } = useUser();
 
   useEffect(() => {
     fetchClasses();
@@ -25,7 +25,6 @@ const Schedule = () => {
           const data = docSnapshot.data();
           const lessonDateTime = moment(`${data.date} ${data.time}`, 'YYYY-MM-DD HH:mm').toDate();
 
-          // Update isActive to false if the lesson has passed
           if (lessonDateTime < now && data.isActive) {
             const lessonRef = doc(db, 'Lessons', docSnapshot.id);
             await updateDoc(lessonRef, { isActive: false });
@@ -47,15 +46,42 @@ const Schedule = () => {
     }
   };
 
+  const canRegister = (lesson) => {
+    const lessonWeekStart = moment(lesson.date, 'YYYY-MM-DD').startOf('week');
+    const lessonWeekEnd = moment(lesson.date, 'YYYY-MM-DD').endOf('week');
+
+    const registeredLessonsThisWeek = (userData?.registeredLessons || []).filter((registeredLesson) => {
+      const lessonDate = moment(registeredLesson.date, 'YYYY-MM-DD');
+      return lessonDate.isBetween(lessonWeekStart, lessonWeekEnd, null, '[]');
+    }).length;
+
+    switch (userData?.membership) {
+      case 'חד שבועי':
+        return registeredLessonsThisWeek < 1;
+      case 'דו שבועי':
+        return registeredLessonsThisWeek < 2;
+      case 'תלת שבועי':
+        return registeredLessonsThisWeek < 3;
+      case 'כרטיסייה':
+        return userData?.remainingLessons > 0;
+      default:
+        return true;
+    }
+  };
+
   const handleRegister = async (lesson) => {
-    if (!userData || !userData.phone) {
+    if (!userData?.phone) {
       alert('עליך להתחבר כדי להירשם לשיעור');
+      return;
+    }
+
+    if (!canRegister(lesson)) {
+      alert('אינך יכול להירשם לשיעור נוסף השבוע בהתאם לסוג המנוי שלך.');
       return;
     }
 
     try {
       const lessonRef = doc(db, 'Lessons', lesson.id);
-
       await updateDoc(lessonRef, {
         waitingList: arrayUnion(userData.phone),
         registeredParticipants: lesson.registeredParticipants + 1,
@@ -70,7 +96,11 @@ const Schedule = () => {
           type: lesson.type,
           instructor: lesson.instructor,
         }),
+        ...(userData.membership === 'כרטיסייה' && {
+          remainingLessons: userData.remainingLessons - 1,
+        }),
       });
+      await refreshUserData(userData.phone);
 
       setClasses((prev) =>
         prev.map((l) =>
@@ -84,10 +114,10 @@ const Schedule = () => {
         )
       );
 
-      updateUserData({
-        ...userData,
+      updateUserData((prev) => ({
+        ...prev,
         registeredLessons: [
-          ...(userData.lessons || []),
+          ...(prev.registeredLessons || []),
           {
             id: lesson.id,
             date: lesson.date,
@@ -96,9 +126,10 @@ const Schedule = () => {
             instructor: lesson.instructor,
           },
         ],
-      });
-
-      console.log('נרשמת בהצלחה לשיעור!');
+        ...(userData.membership === 'כרטיסייה' && {
+          remainingLessons: userData.remainingLessons - 1,
+        }),
+      }));
     } catch (error) {
       console.error('Error registering for lesson:', error);
       alert('אירעה שגיאה בהרשמה לשיעור');
@@ -106,7 +137,7 @@ const Schedule = () => {
   };
 
   const handleCancelRegistration = async (lesson) => {
-    if (!userData || !userData.phone) {
+    if (!userData?.phone) {
       alert('עליך להתחבר כדי לבטל הרשמה לשיעור');
       return;
     }
@@ -115,8 +146,10 @@ const Schedule = () => {
       const lessonRef = doc(db, 'Lessons', lesson.id);
 
       await updateDoc(lessonRef, {
-        waitingList: arrayRemove(userData.phone),
-        registeredParticipants: lesson.registeredParticipants - 1,
+        waitingList: Array.isArray(lesson.waitingList)
+          ? arrayRemove(userData.phone)
+          : [],
+        registeredParticipants: Math.max(lesson.registeredParticipants - 1, 0),
       });
 
       const userRef = doc(db, 'Users', userData.phone);
@@ -128,7 +161,12 @@ const Schedule = () => {
           type: lesson.type,
           instructor: lesson.instructor,
         }),
+        ...(userData.membership === 'כרטיסייה' && {
+          remainingLessons: userData.remainingLessons + 1,
+        }),
       });
+
+      await refreshUserData(userData.phone);
 
       setClasses((prev) =>
         prev.map((l) =>
@@ -136,20 +174,21 @@ const Schedule = () => {
             ? {
                 ...l,
                 waitingList: l.waitingList.filter((phone) => phone !== userData.phone),
-                registeredParticipants: l.registeredParticipants - 1,
+                registeredParticipants: Math.max(l.registeredParticipants - 1, 0),
               }
             : l
         )
       );
 
-      updateUserData({
-        ...userData,
-        lessons: (userData.lessons || []).filter(
+      updateUserData((prev) => ({
+        ...prev,
+        registeredLessons: (prev.registeredLessons || []).filter(
           (lessonItem) => lessonItem.id !== lesson.id
         ),
-      });
-
-      console.log('הרשמתך לשיעור בוטלה בהצלחה!');
+        ...(userData.membership === 'כרטיסייה' && {
+          remainingLessons: userData.remainingLessons + 1,
+        }),
+      }));
     } catch (error) {
       console.error('Error canceling registration:', error);
       alert('אירעה שגיאה בביטול ההרשמה לשיעור');
@@ -177,7 +216,7 @@ const Schedule = () => {
               <h2 className="text-lg font-semibold mb-2">{moment(date).format('DD/MM/YYYY')}</h2>
               <div className="grid grid-cols-1 gap-4">
                 {lessonsByDate[date].map((lesson) => {
-                  const isRegistered = lesson.waitingList.includes(userData?.phone);
+                  const isRegistered = Array.isArray(lesson.waitingList) && lesson.waitingList.includes(userData?.phone);
                   return (
                     <div
                       key={lesson.id}

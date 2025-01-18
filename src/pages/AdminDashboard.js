@@ -6,6 +6,7 @@ import moment from 'moment';
 import { Line, Pie, Bar } from 'react-chartjs-2';
 import LessonManagement from './LessonManagement';
 import UserManagement from './UserManagement';
+import ManagerPage from './ManagerPage';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -254,6 +255,7 @@ const AdminDashboard = ({ setCurrentScreen }) => {
     { id: 'dashboard', label: 'לוח בקרה', icon: '📊' },
     { id: 'users', label: 'ניהול משתמשים', icon: '👥' },
     { id: 'lessons', label: 'ניהול שיעורים', icon: '📅' },
+    { id: 'manager', label: 'ניהול מנהלים', icon: '⚙️' },
   ];
   const renderContent = () => {
     switch (activeSection) {
@@ -325,6 +327,8 @@ const AdminDashboard = ({ setCurrentScreen }) => {
         return <UserManagement />;
       case 'lessons':
         return <LessonManagement />;
+        case 'manager':
+          return <ManagerPage />;
       default:
         return null;
     }

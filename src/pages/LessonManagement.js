@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLessons } from '../contexts/LessonsContext';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
@@ -21,15 +23,34 @@ const useIsMobile = () => {
 
 const LessonManagement = () => {
   const { lessons, addLesson, removeLesson, clearAllLessons } = useLessons();
+  const [lessonTypes, setLessonTypes] = useState([]); // Store lesson types fetched from Firebase
   const isMobile = useIsMobile();
 
   const [selectedTimes, setSelectedTimes] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     instructor: '',
-    type: 'מזרן',
+    type: '', // Default to empty; populate with dynamic lesson types
     maxParticipants: 0,
   });
+
+  // Fetch lesson types from Firebase on component mount
+  useEffect(() => {
+    const fetchLessonTypes = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'LessonTypes'));
+        const types = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setLessonTypes(types); // Save fetched lesson types to state
+      } catch (error) {
+        console.error('Error fetching lesson types:', error);
+      }
+    };
+
+    fetchLessonTypes();
+  }, []);
 
   // Group lessons by date for mobile view
   const lessonsByDate = lessons.reduce((acc, lesson) => {
@@ -70,7 +91,11 @@ const LessonManagement = () => {
 
   // Add lessons
   const handleAddLessons = () => {
-    if (formData.instructor.trim() === '' || formData.maxParticipants <= 0) {
+    if (
+      formData.instructor.trim() === '' ||
+      formData.type.trim() === '' ||
+      formData.maxParticipants <= 0
+    ) {
       alert('אנא מלא את כל השדות בטופס');
       return;
     }
@@ -98,7 +123,7 @@ const LessonManagement = () => {
     setSelectedTimes([]);
     setFormData({
       instructor: '',
-      type: 'מזרן',
+      type: '',
       maxParticipants: 0,
     });
     setShowForm(false);
@@ -278,8 +303,14 @@ const LessonManagement = () => {
                 }
                 className="w-full p-2 border rounded-lg"
               >
-                <option value="מזרן">מזרן</option>
-                <option value="מכשירים">מכשירים</option>
+                <option value="" disabled>
+                  בחר סוג שיעור
+                </option>
+                {lessonTypes.map((type) => (
+                  <option key={type.id} value={type.type}>
+                    {type.type}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="mb-4">

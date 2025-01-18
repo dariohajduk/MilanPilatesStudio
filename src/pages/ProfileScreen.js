@@ -59,7 +59,12 @@ const ProfileScreen = () => {
           <div className="flex items-center p-3 bg-gray-50 rounded-lg">
             <span className="text-gray-600 ml-2">🛡️</span>
             <span className="text-gray-600">סוג משתמש: </span>
-            <span className="font-medium mr-2">{userData.isAdmin ? 'מנהל' : 'משתמש רגיל'}</span>
+            <span className="font-medium mr-2">{userData.isAdmin ? 'מנהל' : 'משתמש רגיל'}</span>           
+          </div>
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+          <span className="text-gray-600 ml-2">🛡️</span>
+          <span className="text-gray-600">סוג מנוי: </span>
+          <span className="font-medium mr-2">{userData.membership}</span>
           </div>
         </div>
       </div>
