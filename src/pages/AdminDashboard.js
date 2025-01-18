@@ -63,6 +63,8 @@ const AdminDashboard = ({ setCurrentScreen }) => {
   const [isLoading, setIsLoading] = useState(true);
   const { setLogoUrl } = useLogo();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -261,16 +263,16 @@ const AdminDashboard = ({ setCurrentScreen }) => {
     switch (activeSection) {
       case 'dashboard':
         return (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold">לוח בקרה</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="bg-white rounded-lg p-6 shadow-sm">
                 <h2 className="text-xl font-bold mb-4">סטטיסטיקות מהירות</h2>
                 {isLoading ? (
                   <div className="animate-pulse space-y-4">
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
-                    <div className="h-10 bg-gray-200 rounded"></div>
+                    <div className="h- bg-gray-200 rounded"></div>
+                    <div className="h-25 bg-gray-200 rounded"></div>
+                    <div className="h-25 bg-gray-200 rounded"></div>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -289,26 +291,9 @@ const AdminDashboard = ({ setCurrentScreen }) => {
                   </div>
                 )}
               </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-4">מגמת הרשמות</h2>
-                <div className="h-64">
-                  {chartData && <Line data={chartData} options={chartOptions} />}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-4">התפלגות סוגי מנויים</h2>
-                <div className="h-64">
-                  {pieChartData && <Pie data={pieChartData} options={chartOptions} />}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-4">משתמשים חדשים</h2>
-                <div className="h-64">
-                  {barChartData && <Bar data={barChartData} options={chartOptions} />}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h2 className="text-xl font-bold mb-4">העלאת לוגו</h2>
+              <div className="bg-white rounded-lg p-2 shadow-sm">
+              <div className="bg-white rounded-lg p-2 shadow-sm">
+                <h2 className="text-xl font-bold mb-1">העלאת לוגו</h2>
                 <input
                   type="file"
                   onChange={handleLogoUpload}
@@ -320,6 +305,24 @@ const AdminDashboard = ({ setCurrentScreen }) => {
                   hover:file:bg-blue-100"
                 />
               </div>
+                <h2 className="text-xl font-bold mb-2">מגמת הרשמות</h2>
+                <div className="w-full">
+                  {chartData && <Line data={chartData} options={chartOptions} />}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-1 shadow-sm">
+                <h2 className="text-xl font-bold mb-1">התפלגות סוגי מנויים</h2>
+                <div className="h-64 w-64 mx-auto">
+                  {pieChartData && <Pie data={pieChartData} options={chartOptions} />}
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <h2 className="text-xl font-bold mb-4">משתמשים חדשים</h2>
+                <div className="h-full w-full mx-auto">
+                  {barChartData && <Bar data={barChartData} options={chartOptions} />}
+                </div>
+              </div>
+             
               </div>
           </div>
         );
@@ -335,34 +338,83 @@ const AdminDashboard = ({ setCurrentScreen }) => {
   };
 
   return (
-    <div className="flex">
-      <div className="bg-white shadow-lg w-full">
+    <div className="flex flex-col md:flex-row">
+      {/* Sidebar / Navigation */}
+      <div className="bg-white shadow-lg md:w-1/4 w-full md:block">
         <div className="p-4 border-b">
           <h1 className="text-xl font-bold">ניהול מערכת</h1>
         </div>
-        <nav className="p-4 flex">
-          {menuItems.map((item) => (
+
+        {isMobile ? (
+          // Mobile Dropdown Menu
+          <div className="relative">
             <button
-              key={item.id}
-              onClick={() => {
-                setActiveSection(item.id);              
-               
-              }}
-              className={`flex items-center p-3 mx-2 rounded-lg transition-colors
-                ${activeSection === item.id
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-50'}`}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center p-3 mx-auto w-full text-gray-600 bg-gray-50 rounded-lg shadow-md md:hidden"
             >
-              <span className="mr-3">{item.icon}</span>
-              {item.label}
+              תפריט
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-5 w-5 ml-2 transition-transform ${
+                  isDropdownOpen ? 'rotate-180' : ''
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </button>
-          ))}
-        </nav>
-        <div className="flex-1 p-8 overflow-auto">
-          {renderContent()}
+            {isDropdownOpen && (
+              <div className="absolute w-full bg-white shadow-lg z-10 rounded-lg">
+                {menuItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveSection(item.id);
+                      setIsDropdownOpen(false); // Close dropdown on selection
+                    }}
+                    className={`flex items-center p-3 w-full text-left ${
+                      activeSection === item.id
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="mr-3">{item.icon}</span>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Desktop Menu
+          <nav className="p-4 flex flex-col hidden md:block">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`flex items-center p-3 rounded-lg transition-colors ${
+                  activeSection === item.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <span className="mr-3">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
-      </div>
-     
+
+      {/* Main Content */}
+      <div className="flex-1 p-8 overflow-auto">{renderContent()}</div>
     </div>
   );
 };

@@ -34,9 +34,10 @@ export const lineOptions = {
   ...commonOptions,
   scales: {
     y: {
+      display: false,
+
       beginAtZero: true,
       title: {
-        display: true,
         text: 'Number of Registrations'
       }
     },
@@ -55,6 +56,7 @@ export const barOptions = {
   scales: {
     y: {
       beginAtZero: true,
+      display: false,
       title: {
         display: true,
         text: 'Number of Users'
