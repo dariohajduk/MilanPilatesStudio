@@ -104,6 +104,9 @@ const LessonManagement = () => {
       const date = moment(timeSlot.start).format('YYYY-MM-DD');
       const time = moment(timeSlot.start).format('HH:mm');
       const isActive = moment(timeSlot.start).isAfter(moment());
+    if(isMobile) {
+      date = formData.date;
+      time = formData.time;};
 
       const newLesson = {
         createdAt: moment().toISOString(),
@@ -176,6 +179,7 @@ const LessonManagement = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-xl font-bold mb-4">ניהול שיעורים</h1>
+      {!isMobile ? (
       <div className="mb-4 flex justify-end space-x-4">
         <button
           onClick={handleClearAllLessons}
@@ -189,11 +193,17 @@ const LessonManagement = () => {
         >
           הגדר שיעור
         </button>
-      </div>
+      </div>) : null}
 
       {isMobile ? (
         // Mobile View
         <div>
+          <button
+          onClick={() => setShowForm(true)}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+        >
+          הגדר שיעור
+        </button>
           {Object.keys(lessonsByDate).map((date) => (
             <div key={date} className="mb-6">
               <h2 className="text-lg font-semibold mb-2">
@@ -325,6 +335,33 @@ const LessonManagement = () => {
                 required
               />
             </div>
+            {isMobile ? (
+                          <div className="mb-4">
+                          <input
+                            type="date"
+                            placeholder="תאריך השיעור"
+                            value={formData.date}
+                            onChange={(e) =>
+                              setFormData({ ...formData, date: e.target.value })
+                            }
+                            className="w-full p-2 border rounded-lg"
+                            required
+                          />
+                        </div>): null}
+            {isMobile ? (
+              ( <div className="mb-4">
+                <input
+                  type="time"
+                  placeholder="שעת השיעור"
+                  value={formData.time}
+                  onChange={(e) =>
+                  setFormData({ ...formData, time: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-lg"
+                  required
+                  />
+                </div>
+                )): null}
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowForm(false)}
