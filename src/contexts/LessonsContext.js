@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../firebase'; // Ensure your Firebase setup is correct
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
 const LessonsContext = createContext();
 
@@ -20,25 +20,33 @@ export const LessonsProvider = ({ children }) => {
     };
     fetchLessons();
   }, []);
-  const filteredLessons = lessons.filter(lesson => {
+
+  const filteredLessons = lessons.filter((lesson) => {
     const lessonDate = new Date(lesson.date);
     const currentDate = new Date();
     return lessonDate >= currentDate;
   });
-  
 
-  // Add a lesson to Firebase
-  const addLesson = async (lesson) => {
-    const lessonsCollection = collection(db, 'Lessons');
-    const docRef = await addDoc(lessonsCollection, lesson);
-    setLessons((prev) => [...prev, { id: docRef.id, ...lesson }]);
+  // Add a lesson (local state only)
+  const addLesson = (lesson) => {
+    setLessons((prev) => [...prev, lesson]);
   };
 
   // Remove a single lesson from Firebase
   const removeLesson = async (lessonId) => {
-    await deleteDoc(doc(db, 'Lessons', lessonId));
-    setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+    if (!lessonId) {
+      console.error('Invalid lessonId:', lessonId);
+      return;
+    }
+  
+    try {
+      await deleteDoc(doc(db, 'Lessons', lessonId));
+      setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
+    } catch (error) {
+      console.error('Error removing lesson:', error);
+    }
   };
+  
 
   // Clear all lessons from Firebase
   const clearAllLessons = async () => {
@@ -53,7 +61,7 @@ export const LessonsProvider = ({ children }) => {
 
   return (
     <LessonsContext.Provider
-      value={{ lessons, addLesson, removeLesson, clearAllLessons }}
+      value={{ lessons: filteredLessons, addLesson, removeLesson, clearAllLessons }}
     >
       {children}
     </LessonsContext.Provider>

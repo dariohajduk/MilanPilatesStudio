@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLessons } from '../contexts/LessonsContext';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -32,6 +32,8 @@ const LessonManagement = () => {
     instructor: '',
     type: '', // Default to empty; populate with dynamic lesson types
     maxParticipants: 0,
+    date: '',
+    time: '',
   });
 
   // Fetch lesson types from Firebase on component mount
@@ -90,50 +92,77 @@ const LessonManagement = () => {
   };
 
   // Add lessons
-  const handleAddLessons = () => {
+  const handleAddLessons = async () => {
     if (
       formData.instructor.trim() === '' ||
       formData.type.trim() === '' ||
-      formData.maxParticipants <= 0
+      formData.maxParticipants <= 0 ||
+      (isMobile && (formData.date === '' || formData.time === ''))
     ) {
       alert('אנא מלא את כל השדות בטופס');
       return;
     }
 
-    selectedTimes.forEach((timeSlot) => {
-      const date = moment(timeSlot.start).format('YYYY-MM-DD');
-      const time = moment(timeSlot.start).format('HH:mm');
-      const isActive = moment(timeSlot.start).isAfter(moment());
-    if(isMobile) {
-      date = formData.date;
-      time = formData.time;};
+    const lessonsToAdd = isMobile
+      ? [
+          {
+            date: formData.date,
+            time: formData.time,
+            instructor: formData.instructor,
+            type: formData.type,
+            maxParticipants: formData.maxParticipants.toString(),
+            registeredParticipants: 0,
+            createdAt: moment().toISOString(),
+            title: `${formData.type} - ${formData.instructor}`,
+            isActive: moment(`${formData.date}T${formData.time}`).isAfter(moment()),
+            waitingList: [],
+          },
+        ]
+      : selectedTimes.map((timeSlot) => {
+          const date = moment(timeSlot.start).format('YYYY-MM-DD');
+          const time = moment(timeSlot.start).format('HH:mm');
+          return {
+            date,
+            time,
+            instructor: formData.instructor,
+            type: formData.type,
+            maxParticipants: formData.maxParticipants.toString(),
+            registeredParticipants: 0,
+            createdAt: moment().toISOString(),
+            title: `${formData.type} - ${formData.instructor}`,
+            isActive: moment(timeSlot.start).isAfter(moment()),
+            waitingList: [],
+          };
+        });
 
-      const newLesson = {
-        createdAt: moment().toISOString(),
-        date,
-        time,
-        instructor: formData.instructor,
-        type: formData.type,
-        maxParticipants: formData.maxParticipants.toString(),
-        registeredParticipants: 0,
-        title: `${formData.type} - ${formData.instructor}`,
-        isActive,
-        waitingList: [],
-      };
-      addLesson(newLesson);
-    });
-
-    setSelectedTimes([]);
-    setFormData({
-      instructor: '',
-      type: '',
-      maxParticipants: 0,
-    });
-    setShowForm(false);
+    try {
+      for (const lesson of lessonsToAdd) {
+        const docRef = await addDoc(collection(db, 'Lessons'), lesson);
+        // Update local state/context
+        addLesson({ id: docRef.id, ...lesson });
+      }
+      // Reset state after successful submission
+      setSelectedTimes([]);
+      setFormData({
+        instructor: '',
+        type: '',
+        maxParticipants: 0,
+        date: '',
+        time: '',
+      });
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error adding lessons:', error);
+    }
   };
 
   // Delete a single lesson
   const handleDeleteLesson = (lessonId) => {
+    if (!lessonId) {
+      console.error("Invalid lesson ID:", lessonId);
+      return;
+    }
+
     if (window.confirm('האם אתה בטוח שברצונך למחוק את השיעור?')) {
       removeLesson(lessonId);
     }
@@ -148,6 +177,10 @@ const LessonManagement = () => {
 
   // Prepare events for the calendar
   const events = lessons.map((lesson) => {
+    if (!lesson.id) {
+      console.error("Lesson ID is missing:", lesson);
+      return null;
+    }
     const lessonStart = new Date(`${lesson.date}T${lesson.time}`);
     const lessonEnd = new Date(lessonStart);
     lessonEnd.setHours(lessonEnd.getHours() + 1); // Ensure lessons span 1 hour
@@ -157,7 +190,7 @@ const LessonManagement = () => {
       start: lessonStart,
       end: lessonEnd,
     };
-  });
+  }).filter(Boolean);
 
   // Custom style for selected time slots
   const timeSlotStyleGetter = (value) => {
@@ -180,37 +213,38 @@ const LessonManagement = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-xl font-bold mb-4">ניהול שיעורים</h1>
       {!isMobile ? (
-      <div className="mb-4 flex justify-end space-x-4">
-        <button
-          onClick={handleClearAllLessons}
-          className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-        >
-          מחק את כל השיעורים
-        </button>
-        <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-        >
-          הגדר שיעור
-        </button>
-      </div>) : null}
+        <div className="mb-4 flex justify-end space-x-4">
+          <button
+            onClick={handleClearAllLessons}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+          >
+            מחק את כל השיעורים
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            הגדר שיעור
+          </button>
+        </div>
+      ) : null}
 
       {isMobile ? (
         // Mobile View
         <div>
           <button
-          onClick={() => setShowForm(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-        >
-          הגדר שיעור
-        </button>
+            onClick={() => setShowForm(true)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            הגדר שיעור
+          </button>
           {Object.keys(lessonsByDate).map((date) => (
             <div key={date} className="mb-6">
               <h2 className="text-lg font-semibold mb-2">
                 {moment(date).format('DD/MM/YYYY')}
               </h2>
               <div className="grid grid-cols-1 gap-4">
-                {lessonsByDate[date].map((lesson) => (
+                {lessonsByDate[date]?.map((lesson) => (
                   <div
                     key={lesson.id}
                     className="bg-white shadow-lg rounded-lg p-4 border border-gray-200 flex flex-col"
@@ -279,11 +313,7 @@ const LessonManagement = () => {
             ),
             timeSlotWrapper: ({ children, value }) => {
               const styleProps = timeSlotStyleGetter(value);
-              return (
-                <div style={styleProps.style}>
-                  {children}
-                </div>
-              );
+              return <div style={styleProps.style}>{children}</div>;
             },
           }}
         />
@@ -336,32 +366,33 @@ const LessonManagement = () => {
               />
             </div>
             {isMobile ? (
-                          <div className="mb-4">
-                          <input
-                            type="date"
-                            placeholder="תאריך השיעור"
-                            value={formData.date}
-                            onChange={(e) =>
-                              setFormData({ ...formData, date: e.target.value })
-                            }
-                            className="w-full p-2 border rounded-lg"
-                            required
-                          />
-                        </div>): null}
+              <div className="mb-4">
+                <input
+                  type="date"
+                  placeholder="תאריך השיעור"
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
+                  className="w-full p-2 border rounded-lg"
+                  required
+                />
+              </div>
+            ) : null}
             {isMobile ? (
-              ( <div className="mb-4">
+              <div className="mb-4">
                 <input
                   type="time"
                   placeholder="שעת השיעור"
                   value={formData.time}
                   onChange={(e) =>
-                  setFormData({ ...formData, time: e.target.value })
+                    setFormData({ ...formData, time: e.target.value })
                   }
                   className="w-full p-2 border rounded-lg"
                   required
-                  />
-                </div>
-                )): null}
+                />
+              </div>
+            ) : null}
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowForm(false)}
