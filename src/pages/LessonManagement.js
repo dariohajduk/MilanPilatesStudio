@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useLessons } from '../contexts/LessonsContext';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const localizer = momentLocalizer(moment);
 
-// Helper to detect if the screen is mobile-sized
 const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -23,49 +22,133 @@ const useIsMobile = () => {
 
 const LessonManagement = () => {
   const { lessons, addLesson, removeLesson, clearAllLessons } = useLessons();
-  const [lessonTypes, setLessonTypes] = useState([]); // Store lesson types fetched from Firebase
+  const [lessonTypes, setLessonTypes] = useState([]);
   const isMobile = useIsMobile();
-
   const [selectedTimes, setSelectedTimes] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [formData, setFormData] = useState({
     instructor: '',
-    type: '', // Default to empty; populate with dynamic lesson types
+    type: '',
     maxParticipants: 0,
     date: '',
     time: '',
   });
 
-  // Fetch lesson types from Firebase on component mount
+  // Fetch both lesson types and lessons
   useEffect(() => {
-    const fetchLessonTypes = async () => {
+    let isMounted = true;
+
+    const fetchData = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, 'LessonTypes'));
-        const types = querySnapshot.docs.map((doc) => ({
+        // Fetch lesson types
+        const typesSnapshot = await getDocs(collection(db, 'LessonTypes'));
+        if (!isMounted) return;
+        
+        const types = typesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
-        setLessonTypes(types); // Save fetched lesson types to state
+        setLessonTypes(types);
+
+        // Fetch ALL lessons
+        const lessonsRef = collection(db, 'Lessons');
+        const lessonsSnapshot = await getDocs(lessonsRef);
+        if (!isMounted) return;
+
+        // Add new lessons only if they don't exist in context
+        const fetchedLessons = lessonsSnapshot.docs.map(doc => {
+          const lesson = {
+            id: doc.id,
+            ...doc.data()
+          };
+          console.log('Fetched lesson:', {
+            id: lesson.id,
+            date: lesson.date,
+            time: lesson.time,
+            isActive: lesson.isActive,
+            type: lesson.type
+          });
+          return lesson;
+        });
+
+        console.log('Current lessons in context:', lessons.map(l => ({
+          id: l.id,
+          date: l.date,
+          time: l.time,
+          isActive: l.isActive,
+          type: l.type
+        })));
+
+        // Get existing lesson IDs
+        const existingLessonIds = lessons.map(lesson => lesson.id);
+
+        // Only add lessons that don't already exist in context
+        fetchedLessons.forEach(lesson => {
+          if (lesson.id && !existingLessonIds.includes(lesson.id)) {
+            console.log('Adding new lesson to context:', {
+              id: lesson.id,
+              date: lesson.date,
+              time: lesson.time,
+              isActive: lesson.isActive,
+              type: lesson.type
+            });
+            addLesson(lesson);
+          }
+        });
+
+        // Log final state
+        console.log('Total lessons after update:', lessons.length);
+        console.log('Active lessons:', lessons.filter(l => l.isActive).length);
+        console.log('Historical lessons:', lessons.filter(l => !l.isActive).length);
+
       } catch (error) {
-        console.error('Error fetching lesson types:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchLessonTypes();
-  }, []);
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [lessons]);
+
+  // Separate current and past lessons based on isActive flag
+  const { currentLessons, pastLessons } = lessons.reduce(
+    (acc, lesson) => {
+      if (lesson.isActive) {
+        acc.currentLessons.push(lesson);
+      } else {
+        acc.pastLessons.push(lesson);
+      }
+      return acc;
+    },
+    { currentLessons: [], pastLessons: [] }
+  );
 
   // Group lessons by date for mobile view
-  const lessonsByDate = lessons.reduce((acc, lesson) => {
-    const date = lesson.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(lesson);
-    return acc;
-  }, {});
+  const groupLessonsByDate = (lessonList) => {
+    return lessonList.reduce((acc, lesson) => {
+      const date = lesson.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(lesson);
+      return acc;
+    }, {});
+  };
 
-  // Handle selecting time slots
+  const currentLessonsByDate = groupLessonsByDate(currentLessons);
+  const pastLessonsByDate = groupLessonsByDate(pastLessons);
+
   const handleSelectSlot = ({ start, end }) => {
+    // Check if the selected time is in the past
+    if (!moment(start).isAfter(moment())) {
+      alert('לא ניתן להוסיף שיעורים בתאריכים שעברו');
+      return;
+    }
+
     const newSelection = [];
     let current = new Date(start);
     while (current < end) {
@@ -91,7 +174,6 @@ const LessonManagement = () => {
     });
   };
 
-  // Add lessons
   const handleAddLessons = async () => {
     if (
       formData.instructor.trim() === '' ||
@@ -102,6 +184,13 @@ const LessonManagement = () => {
       alert('אנא מלא את כל השדות בטופס');
       return;
     }
+
+    // Check for existing lessons at the same time
+    const checkForExistingLesson = (date, time) => {
+      return lessons.some(
+        (lesson) => lesson.date === date && lesson.time === time
+      );
+    };
 
     const lessonsToAdd = isMobile
       ? [
@@ -130,18 +219,33 @@ const LessonManagement = () => {
             registeredParticipants: 0,
             createdAt: moment().toISOString(),
             title: `${formData.type} - ${formData.instructor}`,
-            isActive: moment(timeSlot.start).isAfter(moment()),
+            isActive: true,
             waitingList: [],
           };
         });
 
     try {
-      for (const lesson of lessonsToAdd) {
+      // Filter out any time slots that already have lessons
+      const validLessons = lessonsToAdd.filter(
+        (lesson) => !checkForExistingLesson(lesson.date, lesson.time)
+      );
+
+      if (validLessons.length === 0) {
+        alert('כל השעות שנבחרו כבר תפוסות');
+        return;
+      }
+
+      if (validLessons.length < lessonsToAdd.length) {
+        alert('חלק מהשעות שנבחרו כבר תפוסות. רק השעות הפנויות יתווספו.');
+      }
+
+      for (const lesson of validLessons) {
         const docRef = await addDoc(collection(db, 'Lessons'), lesson);
-        // Update local state/context
+        console.log('Added new lesson:', { id: docRef.id, ...lesson });
         addLesson({ id: docRef.id, ...lesson });
       }
-      // Reset state after successful submission
+
+      // Reset form and selection only after successful add
       setSelectedTimes([]);
       setFormData({
         instructor: '',
@@ -153,46 +257,51 @@ const LessonManagement = () => {
       setShowForm(false);
     } catch (error) {
       console.error('Error adding lessons:', error);
+      alert('אירעה שגיאה בהוספת השיעורים');
     }
   };
 
-  // Delete a single lesson
-  const handleDeleteLesson = (lessonId) => {
-    if (!lessonId) {
-      console.error("Invalid lesson ID:", lessonId);
+  const handleDeleteLesson = (lesson) => {
+    if (!lesson.isActive) {
+      alert('לא ניתן למחוק שיעורים שכבר התקיימו');
       return;
     }
 
     if (window.confirm('האם אתה בטוח שברצונך למחוק את השיעור?')) {
-      removeLesson(lessonId);
+      removeLesson(lesson.id);
     }
   };
 
-  // Clear all lessons
   const handleClearAllLessons = () => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק את כל השיעורים?')) {
-      clearAllLessons();
+    if (window.confirm('האם אתה בטוח שברצונך למחוק את כל השיעורים העתידיים?')) {
+      // Only clear future lessons
+      currentLessons.forEach(lesson => removeLesson(lesson.id));
     }
   };
 
-  // Prepare events for the calendar
-  const events = lessons.map((lesson) => {
-    if (!lesson.id) {
-      console.error("Lesson ID is missing:", lesson);
-      return null;
-    }
-    const lessonStart = new Date(`${lesson.date}T${lesson.time}`);
-    const lessonEnd = new Date(lessonStart);
-    lessonEnd.setHours(lessonEnd.getHours() + 1); // Ensure lessons span 1 hour
-    return {
-      id: lesson.id,
-      title: `${lesson.type} - ${lesson.instructor}`,
-      start: lessonStart,
-      end: lessonEnd,
-    };
-  }).filter(Boolean);
+  // Include all lessons in events, using isActive flag
+  const events = lessons
+    .sort((a, b) => moment(`${a.date}T${a.time}`).diff(moment(`${b.date}T${b.time}`)))
+    .map((lesson) => {
+      if (!lesson.id) {
+        console.error("Lesson ID is missing:", lesson);
+        return null;
+      }
+      const lessonStart = new Date(`${lesson.date}T${lesson.time}`);
+      const lessonEnd = new Date(lessonStart);
+      lessonEnd.setHours(lessonEnd.getHours() + 1);
 
-  // Custom style for selected time slots
+      return {
+        id: lesson.id,
+        title: `${lesson.type} - ${lesson.instructor}`,
+        start: lessonStart,
+        end: lessonEnd,
+        isPast: !lesson.isActive,
+        lesson: lesson,
+      };
+    })
+    .filter(Boolean);
+
   const timeSlotStyleGetter = (value) => {
     const isSelected = selectedTimes.some(
       ({ start }) => start.getTime() === value.getTime()
@@ -209,16 +318,63 @@ const LessonManagement = () => {
     };
   };
 
+  const eventStyleGetter = (event) => {
+    if (event.isPast) {
+      return {
+        style: {
+          backgroundColor: '#E5E7EB', // Gray background
+          color: '#4B5563', // Darker text
+          border: '1px solid #D1D5DB',
+          borderLeft: '4px solid #9CA3AF', // Left border indicator
+          opacity: 0.85,
+          cursor: 'default',
+        },
+      };
+    }
+    return {
+      style: {
+        backgroundColor: '#93C5FD', // Light blue background
+        color: '#1E3A8A', // Dark blue text
+        border: '1px solid #60A5FA',
+        borderLeft: '4px solid #3B82F6',
+      },
+    };
+  };
+
+  const LessonCard = ({ lesson, isPast }) => (
+    <div
+      className={`bg-white shadow-lg rounded-lg p-4 border ${
+        isPast ? 'border-gray-300 opacity-70' : 'border-gray-200'
+      } flex flex-col`}
+    >
+      <div className="text-lg font-semibold text-gray-800">
+        {lesson.type} עם {lesson.instructor}
+      </div>
+      <div className="text-gray-600 mt-1">
+        שעה: {lesson.time}
+      </div>
+      {!isPast && (
+        <button
+          onClick={() => handleDeleteLesson(lesson)}
+          className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+        >
+          מחק
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-xl font-bold mb-4">ניהול שיעורים</h1>
+      
       {!isMobile ? (
         <div className="mb-4 flex justify-end space-x-4">
           <button
             onClick={handleClearAllLessons}
             className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
           >
-            מחק את כל השיעורים
+            מחק את כל השיעורים העתידיים
           </button>
           <button
             onClick={() => setShowForm(true)}
@@ -226,49 +382,85 @@ const LessonManagement = () => {
           >
             הגדר שיעור
           </button>
-        </div>
-      ) : null}
-
-      {isMobile ? (
-        // Mobile View
-        <div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
-          >
-            הגדר שיעור
-          </button>
-          {Object.keys(lessonsByDate).map((date) => (
-            <div key={date} className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">
-                {moment(date).format('DD/MM/YYYY')}
-              </h2>
-              <div className="grid grid-cols-1 gap-4">
-                {lessonsByDate[date]?.map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    className="bg-white shadow-lg rounded-lg p-4 border border-gray-200 flex flex-col"
-                  >
-                    <div className="text-lg font-semibold text-gray-800">
-                      {lesson.type} עם {lesson.instructor}
-                    </div>
-                    <div className="text-gray-600 mt-1">
-                      שעה: {lesson.time}
-                    </div>
-                    <button
-                      onClick={() => handleDeleteLesson(lesson.id)}
-                      className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                    >
-                      מחק
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       ) : (
-        // Desktop View
+        <div className="mb-4 space-y-2">
+          <button
+            onClick={() => setShowForm(true)}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            הגדר שיעור
+          </button>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="w-full px-4 py-2 bg-gray-500 text-white rounded-lg"
+          >
+            {showHistory ? 'הצג שיעורים עתידיים' : 'הצג היסטוריית שיעורים'}
+          </button>
+        </div>
+      )}
+
+      {isMobile ? (
+        <div>
+          <div className="mb-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">
+                {showHistory ? 'היסטוריית שיעורים' : 'שיעורים קרובים'}
+              </h2>
+              <span className="text-sm text-gray-500">
+                {showHistory 
+                  ? `${Object.keys(pastLessonsByDate).length} ימים` 
+                  : `${Object.keys(currentLessonsByDate).length} ימים`}
+              </span>
+            </div>
+          </div>
+          
+          {showHistory ? (
+            // Past lessons (History)
+            Object.keys(pastLessonsByDate)
+              .sort((a, b) => moment(b).diff(moment(a)))
+              .map((date) => (
+                <div key={date} className="mb-6 bg-gray-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-700">
+                    {moment(date).format('DD/MM/YYYY')}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {pastLessonsByDate[date]
+                      ?.sort((a, b) => moment(`${a.date}T${a.time}`).diff(moment(`${b.date}T${b.time}`)))
+                      .map((lesson) => (
+                        <LessonCard key={lesson.id} lesson={lesson} isPast={true} />
+                      ))}
+                  </div>
+                </div>
+              ))
+          ) : (
+            // Current lessons
+            Object.keys(currentLessonsByDate)
+              .sort((a, b) => moment(a).diff(moment(b)))
+              .map((date) => (
+                <div key={date} className="mb-6 bg-blue-50 p-4 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-2 text-blue-900">
+                    {moment(date).format('DD/MM/YYYY')}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {currentLessonsByDate[date]
+                      ?.sort((a, b) => moment(`${a.date}T${a.time}`).diff(moment(`${b.date}T${b.time}`)))
+                      .map((lesson) => (
+                        <LessonCard key={lesson.id} lesson={lesson} isPast={false} />
+                      ))}
+                  </div>
+                </div>
+              ))
+          )}
+          
+          {((showHistory && Object.keys(pastLessonsByDate).length === 0) ||
+            (!showHistory && Object.keys(currentLessonsByDate).length === 0)) && (
+            <div className="text-center py-8 text-gray-500">
+              {showHistory ? 'אין שיעורים בהיסטוריה' : 'אין שיעורים קרובים'}
+            </div>
+          )}
+        </div>
+      ) : (
         <Calendar
           localizer={localizer}
           selectable
@@ -293,6 +485,15 @@ const LessonManagement = () => {
             previous: 'קודם',
             next: 'הבא',
           }}
+          eventPropGetter={(event) => ({
+            style: {
+              backgroundColor: event.lesson?.isActive ? '#93C5FD' : '#E5E7EB',
+              color: event.lesson?.isActive ? '#1E3A8A' : '#4B5563',
+              border: event.lesson?.isActive ? '1px solid #60A5FA' : '1px solid #D1D5DB',
+              borderLeft: event.lesson?.isActive ? '4px solid #3B82F6' : '4px solid #9CA3AF',
+              opacity: event.lesson?.isActive ? 1 : 0.85,
+            },
+          })}
           components={{
             event: ({ event }) => (
               <div
@@ -300,15 +501,22 @@ const LessonManagement = () => {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  width: '100%',
+                  padding: '2px 4px',
                 }}
               >
                 <span>{event.title}</span>
-                <button
-                  onClick={() => handleDeleteLesson(event.id)}
-                  className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                >
-                  מחק
-                </button>
+                {event.lesson?.isActive && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteLesson(event.lesson);
+                    }}
+                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                  >
+                    מחק
+                  </button>
+                )}
               </div>
             ),
             timeSlotWrapper: ({ children, value }) => {
@@ -321,7 +529,7 @@ const LessonManagement = () => {
 
       {showForm && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
             <h2 className="text-lg font-bold mb-4">הוסף שיעור</h2>
             <div className="mb-4">
               <input
@@ -359,50 +567,55 @@ const LessonManagement = () => {
                 placeholder="מספר משתתפים מקסימלי"
                 value={formData.maxParticipants}
                 onChange={(e) =>
-                  setFormData({ ...formData, maxParticipants: e.target.value })
+                  setFormData({
+                    ...formData,
+                    maxParticipants: parseInt(e.target.value) || 0
+                  })
                 }
                 className="w-full p-2 border rounded-lg"
+                min="1"
                 required
               />
             </div>
-            {isMobile ? (
-              <div className="mb-4">
-                <input
-                  type="date"
-                  placeholder="תאריך השיעור"
-                  value={formData.date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, date: e.target.value })
-                  }
-                  className="w-full p-2 border rounded-lg"
-                  required
-                />
-              </div>
-            ) : null}
-            {isMobile ? (
-              <div className="mb-4">
-                <input
-                  type="time"
-                  placeholder="שעת השיעור"
-                  value={formData.time}
-                  onChange={(e) =>
-                    setFormData({ ...formData, time: e.target.value })
-                  }
-                  className="w-full p-2 border rounded-lg"
-                  required
-                />
-              </div>
-            ) : null}
+            {isMobile && (
+              <>
+                <div className="mb-4">
+                  <input
+                    type="date"
+                    placeholder="תאריך השיעור"
+                    value={formData.date}
+                    onChange={(e) =>
+                      setFormData({ ...formData, date: e.target.value })
+                    }
+                    min={moment().format('YYYY-MM-DD')}
+                    className="w-full p-2 border rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <input
+                    type="time"
+                    placeholder="שעת השיעור"
+                    value={formData.time}
+                    onChange={(e) =>
+                      setFormData({ ...formData, time: e.target.value })
+                    }
+                    className="w-full p-2 border rounded-lg"
+                    required
+                  />
+                </div>
+              </>
+            )}
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg"
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
               >
                 ביטול
               </button>
               <button
                 onClick={handleAddLessons}
-                className="px-4 py-2 bg-green-500 text-white rounded-lg"
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
               >
                 הוסף
               </button>
