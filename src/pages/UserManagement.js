@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebase';
-import { setDoc, doc, getDocs, collection, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
+import { fetchUsers, addUser, editUser, deleteUser } from '../services/firebaseService';
 import { useUser } from '../contexts/UserContext';
 
 const UserManagement = () => {
@@ -14,120 +13,81 @@ const UserManagement = () => {
     completedLessons: 0,
     joinDate: new Date().toISOString().split('T')[0],
   });
-
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMembership, setFilterMembership] = useState('');
   const [error, setError] = useState('');
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [memberships, setMemberships] = useState([]);
-  const { refreshUserData } = useUser(); // Import refreshUserData
+  const { refreshUserData } = useUser();
 
   useEffect(() => {
-    fetchMemberships();
-    fetchUsers();
+    loadUsers();
   }, []);
 
-  const fetchMemberships = async () => {
+  const loadUsers = async () => {
     try {
-      const membershipsSnapshot = await getDocs(collection(db, 'Memberships'));
-      const membershipsList = membershipsSnapshot.docs.map((doc) => doc.data().name);
-      setMemberships(membershipsList);
+      const fetchedUsers = await fetchUsers();
+      setUsers(fetchedUsers);
     } catch (err) {
-      console.error('Error fetching memberships:', err);
+      handleError('שגיאה בטעינת המשתמשים');
     }
   };
 
-  const fetchUsers = async () => {
-    try {
-      const usersSnapshot = await getDocs(collection(db, 'Users'));
-      const usersList = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setUsers(usersList);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setNewUser((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
+  const handleError = (message) => {
+    console.error(message);
+    setError(message);
   };
 
   const handleAddUser = async () => {
     if (!newUser.name || !newUser.phone || !newUser.membership) {
-      setError('אנא מלא את כל השדות החובה כולל סוג מנוי');
+      handleError('אנא מלא את כל השדות החובה');
       return;
     }
 
     try {
-      await setDoc(doc(db, 'Users', newUser.phone), {
-        ...newUser,
-        createdAt: new Date().toISOString(),
-      });
-
+      await addUser(newUser);
       setUsers((prev) => [...prev, { id: newUser.phone, ...newUser }]);
-      setError('');
       setIsPopupOpen(false);
+      setError('');
       resetForm();
-
-      // Refresh user data
-      if (newUser.phone) {
-        await refreshUserData(newUser.phone);
-      } else {
-        console.error('Phone number is missing for refreshUserData');
-      }
     } catch (err) {
-      console.error('Error adding user:', err);
-      setError('אירעה שגיאה בהוספת המשתמש');
+      handleError('שגיאה בהוספת המשתמש');
     }
   };
 
   const handleEditUser = async () => {
-    if (!editingUser.membership) {
-      setError('יש לבחור מנוי');
+    if (!editingUser.name || !editingUser.phone || !editingUser.membership) {
+      setError('אנא מלא את כל השדות החובה');
       return;
     }
 
     try {
-      if (editingUser.phone !== users.find(user => user.id === editingUser.id)?.phone) {
-        await setDoc(doc(db, 'Users', editingUser.phone), editingUser);
-        await deleteDoc(doc(db, 'Users', editingUser.id));
-        setUsers((prev) => prev.filter((user) => user.id !== editingUser.id));
-      } else {
-        await updateDoc(doc(db, 'Users', editingUser.phone), editingUser);
-      }
+      await editUser(editingUser.id, editingUser);
 
-      setUsers((prev) =>
-        prev.map((user) => (user.id === editingUser.id ? { id: editingUser.phone, ...editingUser } : user))
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === editingUser.id ? { ...editingUser } : user
+        )
       );
+
       setEditingUser(null);
       setIsPopupOpen(false);
-
-      // Refresh user data
-      if (editingUser.phone) {
-        await refreshUserData(editingUser.phone);
-      } else {
-        console.error('Phone number is missing for refreshUserData');
-      }
-    } catch (err) {
-      console.error('Error editing user:', err);
-      setError('אירעה שגיאה בעדכון המשתמש');
+      setError('');
+    } catch (error) {
+      console.error('Error editing user:', error);
+      setError('שגיאה בעדכון המשתמש');
     }
   };
 
   const handleDeleteUser = async (userId) => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק את המשתמש הזה?')) {
-      try {
-        await deleteDoc(doc(db, 'Users', userId));
-        setUsers((prev) => prev.filter((user) => user.id !== userId));
-      } catch (err) {
-        console.error('Error deleting user:', err);
-        alert('אירעה שגיאה במחיקת המשתמש');
-      }
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק את המשתמש?')) return;
+
+    try {
+      await deleteUser(userId);
+      setUsers((prev) => prev.filter((user) => user.id !== userId));
+    } catch (err) {
+      handleError('שגיאה במחיקת המשתמש');
     }
   };
 
@@ -136,7 +96,7 @@ const UserManagement = () => {
       name: '',
       phone: '',
       isAdmin: false,
-      membership: memberships[0] || '',
+      membership: '',
       remainingLessons: 0,
       registeredLessons: [],
       completedLessons: 0,
@@ -160,44 +120,26 @@ const UserManagement = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="p-2 border rounded-lg w-full sm:w-1/2 mb-2 sm:mb-0"
         />
-        <select
-          value={filterMembership}
-          onChange={(e) => setFilterMembership(e.target.value)}
-          className="p-2 border rounded-lg w-full sm:w-1/4"
+        <button
+          onClick={() => {
+            resetForm();
+            setIsPopupOpen(true);
+          }}
+          className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 mb-4 w-full sm:w-auto"
         >
-          <option value="">כל המנויים</option>
-          {memberships.map((membership) => (
-            <option key={membership} value={membership}>
-              {membership}
-            </option>
-          ))}
-        </select>
+          הוסף משתמש
+        </button>
       </div>
-
-      <button
-        onClick={() => {
-          resetForm();
-          setIsPopupOpen(true);
-        }}
-        className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 mb-4 w-full sm:w-auto"
-      >
-        הוסף משתמש
-      </button>
-
       <div className="bg-white rounded-lg p-4 shadow-sm">
         <h2 className="text-lg font-bold mb-4">רשימת משתמשים</h2>
         <ul className="space-y-3">
           {filteredUsers.map((user) => (
-            <li key={user.id} className="flex flex-col sm:flex-row justify-between items-center bg-gray-100 p-3 rounded-md shadow">
-              <div className="flex-1">
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-sm text-gray-600">טלפון: {user.phone}</p>
-                <p className="text-sm text-gray-600">מנוי: {user.membership}</p>
-                {user.membership === 'כרטיסייה' && (
-                  <p className="text-sm text-gray-600">אימונים שנותרו: {user.remainingLessons}</p>
-                )}
+            <li key={user.id} className="flex justify-between items-center p-3 rounded-md bg-gray-100">
+              <div>
+                <p>{user.name}</p>
+                <p>{user.phone}</p>
               </div>
-              <div className="flex space-x-2 rtl:space-x-reverse mt-4 sm:mt-0">
+              <div>
                 <button
                   onClick={() => {
                     setEditingUser(user);
@@ -238,8 +180,8 @@ const UserManagement = () => {
                 value={editingUser ? editingUser.name : newUser.name}
                 onChange={(e) =>
                   editingUser
-                    ? setEditingUser({ ...editingUser, name: e.target.value })
-                    : handleChange(e)
+                    ? setEditingUser((prev) => ({ ...prev, name: e.target.value }))
+                    : setNewUser((prev) => ({ ...prev, name: e.target.value }))
                 }
                 className="w-full p-2 border rounded-md"
               />
@@ -250,8 +192,8 @@ const UserManagement = () => {
                 value={editingUser ? editingUser.phone : newUser.phone}
                 onChange={(e) =>
                   editingUser
-                    ? setEditingUser({ ...editingUser, phone: e.target.value })
-                    : handleChange(e)
+                    ? setEditingUser((prev) => ({ ...prev, phone: e.target.value }))
+                    : setNewUser((prev) => ({ ...prev, phone: e.target.value }))
                 }
                 className="w-full p-2 border rounded-md"
               />
@@ -261,40 +203,21 @@ const UserManagement = () => {
                 onChange={(e) => {
                   const value = e.target.value;
                   if (editingUser) {
-                    setEditingUser({
-                      ...editingUser,
+                    setEditingUser((prev) => ({
+                      ...prev,
                       membership: value,
-                      remainingLessons: value === 'כרטיסייה' ? editingUser.remainingLessons : 0,
-                    });
+                    }));
                   } else {
-                    handleChange(e);
-                    if (value === 'כרטיסייה') {
-                      setNewUser((prev) => ({ ...prev, remainingLessons: 0 }));
-                    }
+                    setNewUser((prev) => ({ ...prev, membership: value }));
                   }
                 }}
                 className="w-full p-2 border rounded-md"
               >
-                {memberships.map((membership) => (
-                  <option key={membership} value={membership}>
-                    {membership}
-                  </option>
-                ))}
+                <option value="">בחר מנוי</option>
+                {/* Replace this list dynamically */}
+                <option value="כרטיסייה">כרטיסייה</option>
+                <option value="מנוי חודשי">מנוי חודשי</option>
               </select>
-              {(editingUser?.membership === 'כרטיסייה' || newUser.membership === 'כרטיסייה') && (
-                <input
-                  type="number"
-                  name="remainingLessons"
-                  placeholder="מספר אימונים בכרטיסייה"
-                  value={editingUser ? editingUser.remainingLessons : newUser.remainingLessons}
-                  onChange={(e) =>
-                    editingUser
-                      ? setEditingUser({ ...editingUser, remainingLessons: parseInt(e.target.value, 10) || 0 })
-                      : setNewUser((prev) => ({ ...prev, remainingLessons: parseInt(e.target.value, 10) || 0 }))
-                  }
-                  className="w-full p-2 border rounded-md"
-                />
-              )}
               <div className="flex justify-end space-x-2 rtl:space-x-reverse">
                 <button
                   onClick={() => setIsPopupOpen(false)}
