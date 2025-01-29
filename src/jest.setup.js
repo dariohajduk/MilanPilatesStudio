@@ -12,5 +12,7 @@ if (typeof global.Blob === 'undefined') {
   jest.mock('firebase/firestore', () => ({
     getFirestore: jest.fn(() => ({})), // Mock פשוט
   }));
+  jest.mock('react-big-calendar/lib/css/react-big-calendar.css', () => {});
+
   
   

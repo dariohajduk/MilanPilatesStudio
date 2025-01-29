@@ -9,10 +9,10 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 const localizer = momentLocalizer(moment);
 
 const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -289,7 +289,7 @@ const LessonManagement = () => {
       }
       const lessonStart = new Date(`${lesson.date}T${lesson.time}`);
       const lessonEnd = new Date(lessonStart);
-      lessonEnd.setHours(lessonEnd.getHours() + 1);
+      lessonEnd.setMinutes(lessonEnd.getHours() +35);
 
       return {
         id: lesson.id,
@@ -323,9 +323,9 @@ const LessonManagement = () => {
       return {
         style: {
           backgroundColor: '#E5E7EB', // Gray background
-          color: '#4B5563', // Darker text
+          color: '#4B5563', // Dark text
           border: '1px solid #D1D5DB',
-          borderLeft: '4px solid #9CA3AF', // Left border indicator
+          borderLeft: '4px solid #9CA3AF',
           opacity: 0.85,
           cursor: 'default',
         },
@@ -333,13 +333,14 @@ const LessonManagement = () => {
     }
     return {
       style: {
-        backgroundColor: '#93C5FD', // Light blue background
-        color: '#1E3A8A', // Dark blue text
+        backgroundColor: '#93C5FD',
+        color: '#1E3A8A',
         border: '1px solid #60A5FA',
         borderLeft: '4px solid #3B82F6',
       },
     };
   };
+  
 
   const LessonCard = ({ lesson, isPast }) => (
     <div
@@ -469,14 +470,14 @@ const LessonManagement = () => {
           style={{
             height: 'calc(100vh - 200px)',
             width: '100%',
-            fontSize: '12px',
+            fontSize: '8px',
           }}
           defaultView="week"
           views={['month', 'week', 'day']}
           step={60}
           timeslots={1}
           min={new Date(1970, 1, 1, 8, 0, 0)}
-          max={new Date(1970, 1, 1, 22, 0, 0)}
+          max={new Date(1970, 1, 1, 23, 0, 0)}
           messages={{
             month: 'חודש',
             week: 'שבוע',
@@ -485,34 +486,43 @@ const LessonManagement = () => {
             previous: 'קודם',
             next: 'הבא',
           }}
-          eventPropGetter={(event) => ({
+          eventPropGetter={(event) => {
+            const isSelected = selectedTimes.some(
+              (time) => time.start.getTime() === event.start.getTime()
+            );
+            return{
             style: {
-              backgroundColor: event.lesson?.isActive ? '#93C5FD' : '#E5E7EB',
-              color: event.lesson?.isActive ? '#1E3A8A' : '#4B5563',
-              border: event.lesson?.isActive ? '1px solid #60A5FA' : '1px solid #D1D5DB',
-              borderLeft: event.lesson?.isActive ? '4px solid #3B82F6' : '4px solid #9CA3AF',
-              opacity: event.lesson?.isActive ? 1 : 0.85,
+              backgroundColor: isSelected ? '#cce5ff' : '#93C5FD',
+              color: '#1E3A8A',
+              border: '1px solid #60A5FA',
+              borderLeft: '1px solid #3B82F6',
+              display: 'flex-inline',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '1px',
+              marginLeft: '5px',
             },
-          })}
+          };}}
           components={{
             event: ({ event }) => (
               <div
                 style={{
                   display: 'flex',
+                  gap: '5px',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   width: '100%',
                   padding: '2px 4px',
                 }}
               >
-                <span>{event.title}</span>
+                <strong>{event.title}</strong>
                 {event.lesson?.isActive && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteLesson(event.lesson);
                     }}
-                    className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white  px-2 py-1 rounded hover:bg-red-600"
                   >
                     מחק
                   </button>

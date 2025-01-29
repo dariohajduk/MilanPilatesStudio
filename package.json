@@ -24,7 +24,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "jest",
+    "test": "jest --transformIgnorePatterns \"node_modules/(?!node-fetch)\"",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -55,6 +55,12 @@
     "babel-jest": "^29.7.0",
     "blob-polyfill": "^9.0.20240710",
     "identity-obj-proxy": "^3.0.0",
-    "jest": "^27.5.1"
+    "jest": "^27.5.1",
+    "node-fetch": "^3.3.2"
+  },
+  "jest": {
+    "setupFilesAfterEnv": [
+      "<rootDir>/setupTests.js"
+    ]
   }
 }

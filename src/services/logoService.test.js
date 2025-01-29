@@ -1,84 +1,112 @@
+const { Blob } = require('buffer'); // ייבוא Blob מ-buffer
 import { logoService } from './logoService';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 
+// Mock Firebase methods
 jest.mock('firebase/storage', () => ({
+  getStorage: jest.fn(() => 'mockStorage'),
   ref: jest.fn(),
   uploadBytes: jest.fn(),
   getDownloadURL: jest.fn(),
 }));
 
 jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(() => 'mockDb'),
   doc: jest.fn(),
   setDoc: jest.fn(),
 }));
 
 describe('logoService Tests', () => {
+  let originalConsoleError;
+
+  beforeEach(() => {
+    originalConsoleError = console.error;
+    console.error = jest.fn(); // עוקף את console.error
+  });
+
   afterEach(() => {
-    jest.clearAllMocks(); // לנקות את המוקים בין הבדיקות
+    console.error = originalConsoleError; // משחזר את הפונקציה המקורית
+    jest.clearAllMocks();
   });
 
   describe('uploadLogo', () => {
-    test('should upload a logo and save the URL in Firestore', async () => {
-      const file = new Blob(['logo content'], { type: 'image/png' });
+    test('should upload logo and save URL in Firestore', async () => {
+      const mockFile = new Blob(['logo content'], { type: 'image/png' });
+      const mockUrl = 'https://mockstorage.com/logo/studio-logo';
 
-      // Mock הפונקציות
-      ref.mockReturnValue({ path: 'logo/studio-logo' });
-      uploadBytes.mockResolvedValueOnce();
-      getDownloadURL.mockResolvedValueOnce('https://example.com/studio-logo.png');
-      setDoc.mockResolvedValueOnce();
+      // Mock implementations
+      ref.mockReturnValue('mockRef');
+      uploadBytes.mockResolvedValueOnce(); // Simulate successful upload
+      getDownloadURL.mockResolvedValueOnce(mockUrl); // Simulate URL retrieval
+      setDoc.mockResolvedValueOnce(); // Simulate Firestore write
 
-      const url = await logoService.uploadLogo(file);
+      // Call the service
+      const result = await logoService.uploadLogo(mockFile);
 
-      expect(ref).toHaveBeenCalledWith(expect.anything(), 'logo/studio-logo');
-      expect(uploadBytes).toHaveBeenCalledWith(
-        expect.objectContaining({ path: 'logo/studio-logo' }),
-        file
-      );
-      expect(getDownloadURL).toHaveBeenCalledWith(
-        expect.objectContaining({ path: 'logo/studio-logo' })
-      );
+      // Assert the returned URL
+      expect(result).toBe(mockUrl);
+
+      // Verify Firebase calls
+      expect(ref).toHaveBeenCalledWith('mockStorage', 'logo/studio-logo');
+      expect(uploadBytes).toHaveBeenCalledWith('mockRef', mockFile);
+      expect(getDownloadURL).toHaveBeenCalledWith('mockRef');
       expect(setDoc).toHaveBeenCalledWith(
-        expect.anything(),
-        {
-          url: 'https://example.com/studio-logo.png',
-          updatedAt: expect.any(String),
-        }
+        doc('mockDb', 'settings', 'logo'),
+        { url: mockUrl, updatedAt: expect.any(String) }
       );
-      expect(url).toBe('https://example.com/studio-logo.png');
     });
 
     test('should throw an error if upload fails', async () => {
-      const file = new Blob(['logo content'], { type: 'image/png' });
+      const mockFile = new Blob(['logo content'], { type: 'image/png' });
+      const mockError = new Error('Upload failed');
 
-      uploadBytes.mockRejectedValueOnce(new Error('Upload failed'));
+      // Mock uploadBytes to throw an error
+      uploadBytes.mockRejectedValueOnce(mockError);
 
-      await expect(logoService.uploadLogo(file)).rejects.toThrow('Upload failed');
+      // Call the service and expect it to throw
+      await expect(logoService.uploadLogo(mockFile)).rejects.toThrow(mockError);
+
+      // Ensure only the upload was attempted
+      expect(uploadBytes).toHaveBeenCalledWith(expect.anything(), mockFile);
+      expect(getDownloadURL).not.toHaveBeenCalled();
+      expect(setDoc).not.toHaveBeenCalled();
     });
   });
 
   describe('getCurrentLogo', () => {
     test('should return the current logo URL', async () => {
-      ref.mockReturnValue({ path: 'logo/studio-logo' });
-      getDownloadURL.mockResolvedValueOnce('https://example.com/studio-logo.png');
+      const mockUrl = 'https://mockstorage.com/logo/studio-logo';
 
-      const url = await logoService.getCurrentLogo();
+      // Mock getDownloadURL
+      ref.mockReturnValue('mockRef');
+      getDownloadURL.mockResolvedValueOnce(mockUrl);
 
-      expect(ref).toHaveBeenCalledWith(expect.anything(), 'logo/studio-logo');
-      expect(getDownloadURL).toHaveBeenCalledWith(
-        expect.objectContaining({ path: 'logo/studio-logo' })
-      );
-      expect(url).toBe('https://example.com/studio-logo.png');
+      // Call the service
+      const result = await logoService.getCurrentLogo();
+
+      // Assert the returned URL
+      expect(result).toBe(mockUrl);
+
+      // Verify Firebase calls
+      expect(ref).toHaveBeenCalledWith('mockStorage', 'logo/studio-logo');
+      expect(getDownloadURL).toHaveBeenCalledWith('mockRef');
     });
 
-    test('should return null if an error occurs', async () => {
-      ref.mockReturnValue({ path: 'logo/studio-logo' });
-      getDownloadURL.mockRejectedValueOnce(new Error('Failed to fetch URL'));
+    test('should return null if no logo is found', async () => {
+      // Mock getDownloadURL to throw an error
+      ref.mockReturnValue('mockRef');
+      getDownloadURL.mockRejectedValueOnce(new Error('No logo found'));
 
-      const url = await logoService.getCurrentLogo();
+      // Call the service
+      const result = await logoService.getCurrentLogo();
 
-      expect(ref).toHaveBeenCalledWith(expect.anything(), 'logo/studio-logo');
-      expect(url).toBeNull();
+      // Assert the result is null
+      expect(result).toBeNull();
+
+      // Verify Firebase calls
+      expect(ref).toHaveBeenCalledWith('mockStorage', 'logo/studio-logo');
+      expect(getDownloadURL).toHaveBeenCalledWith('mockRef');
     });
   });
 });
