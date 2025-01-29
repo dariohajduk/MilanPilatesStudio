@@ -1,7 +1,21 @@
 import React from 'react';
 
-const LessonCard = ({ lesson, isRegistered, onRegister, onCancel }) => (
+// Utility function to format date to "Weekday, DD-MM-YYYY"
+const formatDateWithWeekday = (dateString) => {
+    const date = new Date(dateString);
+    const options = { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' };
+    return new Intl.DateTimeFormat('he-IL', options).format(date); // 'he-IL' formats in Hebrew locale
+  };
+  
+
+const LessonCard = ({ lesson, isRegistered, onRegister, onCancel }) => {
+     // Format the lesson date
+  const formattedDate = formatDateWithWeekday(lesson.date);
+  return (
   <div className="bg-white shadow-lg rounded-lg p-4 border border-gray-200 flex flex-col">
+    <div className="text-lg font-semibold text-gray-800">
+      {formattedDate}
+    </div>
     <div className="text-lg font-semibold text-gray-800">
       {lesson.type} עם {lesson.instructor}
     </div>
@@ -31,6 +45,7 @@ const LessonCard = ({ lesson, isRegistered, onRegister, onCancel }) => (
       </button>
     )}
   </div>
-);
+);};
+
 
 export default LessonCard;
