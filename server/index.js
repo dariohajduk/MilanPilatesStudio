@@ -7,7 +7,7 @@ const PORT = 5000;
 
 // Configure CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: ['https://milan-pilates-studio.vercel.app, 'http://localhost:3001'],
   methods: ['GET', 'POST'],
   credentials: true
 }));
