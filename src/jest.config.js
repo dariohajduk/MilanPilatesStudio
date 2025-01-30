@@ -1,19 +1,30 @@
-// jest.config.js
-module.exports = {
+const path = require('path');
+
+/** @type {import('jest').Config} */
+const config = {
+  verbose: true,
   testEnvironment: 'jsdom',
-  setupFiles: ['<rootDir>/jest.setup.js'],
+  rootDir: path.resolve(__dirname),
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.js'],
-  testEnvironmentOptions: {
-    url: 'http://localhost'
-  },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    // Add these lines to handle CSS imports
+    "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    "^@/(.*)$": "<rootDir>/src/$1",
     '^@pages/(.*)$': '<rootDir>/src/pages/$1',
     '^@services/(.*)$': '<rootDir>/src/services/$1',
     '^@contexts/(.*)$': '<rootDir>/src/contexts/$1'
   },
   transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest'
+    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './babel.config.js' }]
   },
-  moduleDirectories: ['node_modules', 'src']
+  transformIgnorePatterns: [
+    '/node_modules/(?!(firebase|@firebase|chart.js|react-big-calendar)/)'
+  ],
+  testPathIgnorePatterns: ['/node_modules/'],
+  moduleFileExtensions: ['js', 'jsx', 'json'],
+  testEnvironmentOptions: {
+    url: 'http://localhost'
+  }
 };
+
+module.exports = config;

@@ -2,24 +2,20 @@ const express = require('express');
 const runJestTests = require('../jestRunner');
 const router = express.Router();
 
-// Add both GET and POST handlers
-router.get('/run-tests', async (req, res) => {
-  try {
-    const results = await runJestTests();
-    res.status(200).json(results);
-  } catch (error) {
-    console.error('Error running tests:', error);
-    res.status(500).json({ error: 'Failed to run tests' });
-  }
-});
-
 router.post('/run-tests', async (req, res) => {
   try {
+    console.log('Starting test run...');
     const results = await runJestTests();
+    console.log('Test run completed successfully');
     res.status(200).json(results);
   } catch (error) {
-    console.error('Error running tests:', error);
-    res.status(500).json({ error: 'Failed to run tests' });
+    console.error('Error in test route:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to run tests',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
