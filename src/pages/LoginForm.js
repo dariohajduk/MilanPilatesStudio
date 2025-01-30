@@ -11,6 +11,8 @@ const LoginForm = ({ setCurrentScreen }) => {
   const [error, setError] = useState('');
   const { updateUserData } = useUser();
   const { logoUrl } = useLogo();
+  console.log("Logo URL:", logoUrl); // Debugging
+
 
   // Admin constants
   const ADMIN = {
@@ -77,10 +79,10 @@ const LoginForm = ({ setCurrentScreen }) => {
         {/* Header */}
         <div className="text-center">
           <div className="flex flex-col items-center mb-6">
-            <img
-              src={logoUrl}
-              alt="Milan Pilates Logo"
-              className="w-32 h-32 object-contain mb-4"
+             <img
+                src={logoUrl || "/fallback-logo.png"} // Use fallback if logoUrl is undefined
+                alt="Milan Pilates Logo"
+                className="w-32 h-32 object-contain mb-4"
             />
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 text-transparent bg-clip-text">
               Milan Pilates
