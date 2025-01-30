@@ -7,6 +7,8 @@ import { Line, Pie, Bar } from 'react-chartjs-2';
 import LessonManagement from './LessonManagement';
 import UserManagement from './UserManagement';
 import ManagerPage from './ManagerPage';
+import TestsScreen from './TestsScreen'; // New Import
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -258,6 +260,7 @@ const AdminDashboard = ({ setCurrentScreen }) => {
     { id: 'users', label: 'ניהול משתמשים', icon: '👥' },
     { id: 'lessons', label: 'ניהול שיעורים', icon: '📅' },
     { id: 'manager', label: 'ניהול מנהלים', icon: '⚙️' },
+    { id: 'tests', label: 'ניהול בדיקות (Jest)', icon: '🧪' }, // New Menu Item
   ];
   const renderContent = () => {
     switch (activeSection) {
@@ -332,6 +335,8 @@ const AdminDashboard = ({ setCurrentScreen }) => {
         return <LessonManagement />;
         case 'manager':
           return <ManagerPage />;
+        case 'tests': // New Route
+          return <TestsScreen />;
       default:
         return null;
     }

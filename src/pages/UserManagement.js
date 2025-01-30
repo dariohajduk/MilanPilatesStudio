@@ -18,8 +18,8 @@ const UserManagement = () => {
   const [error, setError] = useState('');
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [users, setUsers] = useState([]);
-  const { refreshUserData } = useUser();
+  const [users, setUsers] = useState([])|| {};
+  const { refreshUserData } = useUser() || {};
 
   useEffect(() => {
     loadUsers();

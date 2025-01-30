@@ -22,5 +22,5 @@
   },
   "include": [
     "src"
-  ]
+, "src/server/routes", "server/jestRunner.js", "server/index.js"  ]
 }

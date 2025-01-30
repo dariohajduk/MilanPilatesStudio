@@ -1,0 +1,81 @@
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { act } from 'react';
+import '@testing-library/jest-dom';
+import ProfileScreen from "../../pages/ProfileScreen";
+import { useUser } from '../../contexts/UserContext';
+import { getUserLessons } from '../../services/firebaseService';
+
+// Mock the required dependencies
+jest.mock('../../contexts/UserContext');
+jest.mock('../../services/firebaseService', () => ({
+  getUserLessons: jest.fn()
+}));
+
+describe('ProfileScreen Component', () => {
+  const mockUserData = {
+    name: 'Test User',
+    phone: '0547805845',
+    isAdmin: false,
+    membership: 'Basic'
+  };
+
+  beforeEach(() => {
+    useUser.mockReturnValue({
+      userData: mockUserData
+    });
+  });
+
+  test("renders user profile information", async () => {
+    await act(async () => {
+      render(<ProfileScreen />);
+    });
+
+    expect(screen.getByText('פרופיל משתמש')).toBeInTheDocument();
+    expect(screen.getByText(mockUserData.name)).toBeInTheDocument();
+    expect(screen.getByText(mockUserData.phone)).toBeInTheDocument();
+  });
+
+  test("displays registered lessons", async () => {
+    const mockLessons = [
+      {
+        id: "1",
+        type: "Pilates",
+        date: "2025-01-31",
+        time: "10:00"
+      }
+    ];
+
+    getUserLessons.mockResolvedValue(mockLessons);
+
+    await act(async () => {
+      render(<ProfileScreen />);
+    });
+
+    await waitFor(() => {
+      expect(getUserLessons).toHaveBeenCalledWith(mockUserData.phone);
+    });
+  });
+
+  test("handles error when fetching lessons fails", async () => {
+    getUserLessons.mockRejectedValue(new Error("Failed to fetch"));
+
+    await act(async () => {
+      render(<ProfileScreen />);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/אירעה שגיאה בטעינת השיעורים/)).toBeInTheDocument();
+    });
+  });
+
+  test("shows loading state when fetching data", async () => {
+    getUserLessons.mockImplementation(() => new Promise(() => {}));
+
+    await act(async () => {
+      render(<ProfileScreen />);
+    });
+
+    expect(screen.getByText(/טוען/)).toBeInTheDocument();
+  });
+});

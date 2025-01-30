@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
+
 import { UserProvider, useUser } from './contexts/UserContext';
 import LoginForm from './pages/LoginForm';
 import Home from './pages/Home';
@@ -9,6 +11,8 @@ import UserManagement from './pages/UserManagement';
 import LessonManagement from './pages/LessonManagement';
 import TopNav from './components/TopNav';
 import './index.css';
+
+
 
 const AppContent = () => {
   const [currentScreen, setCurrentScreen] = useState('login');

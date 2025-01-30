@@ -1,5 +1,5 @@
 const { Blob } = require('buffer'); // ייבוא Blob מ-buffer
-import { logoService } from './logoService';
+import { logoService } from '../logoService';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 

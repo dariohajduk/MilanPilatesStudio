@@ -1,33 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState } from "react";
 
-// יצירת הקשר (Context) עבור הלוגו
-const LogoContext = createContext();
+const LogoContext = createContext(null);
 
-// ספק הקשר (Provider) עבור הלוגו
 export const LogoProvider = ({ children }) => {
-  // יצירת משתנה מצב (state) עבור כתובת ה-URL של הלוגו
-  const [logoUrl, setLogoUrl] = useState(localStorage.getItem('logoUrl') || '');
+  const [logoUrl, setLogoUrl] = useState("https://your-default-logo-url.com/logo.png");
 
-  // שימוש ב-useEffect כדי לעדכן את localStorage כאשר logoUrl משתנה
-  useEffect(() => {
-    if (logoUrl) {
-      localStorage.setItem('logoUrl', logoUrl);
-    }
-  }, [logoUrl]);
-
-  // פונקציה לעדכון כתובת ה-URL של הלוגו
-  const updateLogoUrl = (newUrl) => {
-    setLogoUrl(newUrl); // עדכון מצב הלוגו
-    localStorage.setItem('logoUrl', newUrl); // שמירת כתובת ה-URL החדשה ב-localStorage
-  };
-
-  // החזרת ספק ההקשר עם הערכים של logoUrl ו-updateLogoUrl
   return (
-    <LogoContext.Provider value={{ logoUrl, setLogoUrl: updateLogoUrl }}>
-      {children} {/* הצגת הילדים של ספק ההקשר */}
+    <LogoContext.Provider value={{ logoUrl, setLogoUrl }}>
+      {children}
     </LogoContext.Provider>
   );
 };
 
-// יצירת hook מותאם אישית לשימוש בהקשר של הלוגו
-export const useLogo = () => useContext(LogoContext);
+export const useLogo = () => {
+  const context = useContext(LogoContext);
+  if (!context) {
+    throw new Error("useLogo must be used within a LogoProvider");
+  }
+  return context;
+};

@@ -1,4 +1,4 @@
-import { statsService } from './statsService';
+import { statsService } from '../statsService';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // Mock Firebase Firestore methods
