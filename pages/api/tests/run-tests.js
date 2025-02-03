@@ -1,21 +1,34 @@
+import { exec } from 'child_process';
+import path from 'path';
+
 export default function handler(req, res) {
-  // טיפול בבקשות OPTIONS (Preflight)
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Origin", "*"); // ניתן להחליף * בדומיין ספציפי
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS"); // לא כולל GET
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === 'OPTIONS') {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     return res.status(200).end();
   }
 
-  // אפשר תמיכה רק ב-POST
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // טיפול ב-CORS (למקרה שהשרת מחזיר תגובה ללא OPTIONS)
-  res.setHeader("Access-Control-Allow-Origin", "*"); 
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Origin", "*");
 
-  res.status(200).json({ message: "API is working with POST!" });
+  // מסלול לקבצי הבדיקות
+  const testPath = path.join(process.cwd(), 'src/tests');
+
+  exec(`npx jest ${testPath} --json --ci`, (error, stdout) => {
+    if (error) {
+      console.error(`Test run error: ${error}`);
+      return res.status(500).json({ error: `Failed to run tests: ${error.message}` });
+    }
+
+    try {
+      const results = JSON.parse(stdout);
+      res.status(200).json(results);
+    } catch (parseError) {
+      res.status(500).json({ error: `Error parsing test results: ${parseError.message}` });
+    }
+  });
 }

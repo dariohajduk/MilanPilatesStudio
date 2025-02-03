@@ -1,18 +1,9 @@
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import ChartJS from 'chart.js/auto';
+
+
 import { Line, Bar, Pie } from 'react-chartjs-2';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+
 
 // Common chart options
 const commonOptions = {

@@ -18,9 +18,17 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "preserve",
+    "incremental": true
   },
   "include": [
-    "src"
-, "src/server/routes", "server/jestRunner.js", "src/pages/api/index.js"  ]
+    "src",
+    "src/server/routes",
+    "server/jestRunner.js",
+    "src/pages/api/index.js",
+    "pages/api/tests/run-tests.js"
+, "pages/AdminDashboard.js", "pages/Home.js", "pages/LessonManagement.js", "pages/LoginForm.js", "pages/ManagerPage.js", "pages/ProfileScreen.js", "pages/Schedule.js", "pages/TestsScreen.js", "pages/UserManagement.js", "pages/index.js", "pages/index.ts"  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
