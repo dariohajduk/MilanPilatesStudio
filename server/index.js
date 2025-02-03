@@ -3,14 +3,21 @@ const cors = require('cors');
 const testRoutes = require('./routes/tests');
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// Configure CORS
+// Configure CORS with OPTIONS included
 app.use(cors({
-  origin: ['https://milan-pilates-studio.vercel.app, 'http://localhost:3001'],
-  methods: ['GET', 'POST'],
+  origin: [
+    'https://milan-pilates-studio.vercel.app',
+    'http://localhost:3001',
+    'http://localhost:3000'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
+
+// Explicitly handle OPTIONS requests (preflight)
+app.options('*', cors());
 
 app.use(express.json());
 

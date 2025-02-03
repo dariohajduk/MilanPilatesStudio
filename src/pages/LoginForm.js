@@ -10,9 +10,12 @@ const LoginForm = ({ setCurrentScreen }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { updateUserData } = useUser();
-  const { logoUrl } = useLogo();
+  const { logoUrl, loading } = useLogo();
   console.log("Logo URL:", logoUrl); // Debugging
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   // Admin constants
   const ADMIN = {
@@ -29,9 +32,8 @@ const LoginForm = ({ setCurrentScreen }) => {
   };
 
   // Handle login submission
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
@@ -62,6 +64,8 @@ const LoginForm = ({ setCurrentScreen }) => {
 
         updateUserData(userData);
         setCurrentScreen('home');
+      } else if (phone === ADMIN.phone) {
+        setCurrentScreen('admin');
       } else {
         throw new Error('מספר טלפון לא נמצא במערכת');
       }
@@ -96,7 +100,7 @@ const LoginForm = ({ setCurrentScreen }) => {
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleLogin} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           {error && (
             <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm text-center">
               {error}
@@ -141,10 +145,10 @@ const LoginForm = ({ setCurrentScreen }) => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                מתחבר...
+                טוען...
               </div>
             ) : (
-              'התחברות'
+              "התחבר"
             )}
           </button>
         </form>
