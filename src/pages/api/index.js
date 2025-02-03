@@ -1,19 +1,22 @@
 const express = require('express');
 const cors = require('cors');
-const testRoutes = require('./tests'); // Adjusted path
+const testRoutes = require('./tests'); // Adjust this path if needed
 
 const app = express();
 
 app.use(cors({
-  origin: [
-    'https://milan-pilates-studio.vercel.app', // Production
-    /\.vercel\.app$/, // Allow Vercel preview deployments
-    'http://localhost:3000' // Development
-  ],
+  origin: (origin, callback) => {
+    if (!origin || origin.endsWith('.vercel.app')) {
+      callback(null, true); // Allow all Vercel preview deployments
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
 
+// Handle preflight requests explicitly
 app.options('*', cors());
 
 app.use(express.json());
@@ -32,5 +35,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export as a Vercel serverless function
+// Export as a Vercel function
 module.exports = app;
