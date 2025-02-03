@@ -75,7 +75,7 @@ const TestsScreen = () => {
     setTestResults(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/test/run-tests`, {
+      const response = await fetch(`${API_URL}/api/tests/run-tests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
