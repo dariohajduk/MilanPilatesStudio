@@ -8,8 +8,8 @@ const PORT = process.env.PORT || 5000;
 // Update the CORS configuration
 app.use(cors({
   origin: [
-    'https://milan-pilates-studio.vercel.app', // Main Vercel deployment
-    'https://milan-pilates-studio-45u6hy3uz-darios-projects-1e6da2f9.vercel.app', // Temporary Vercel preview deployment
+    'milan-pilates-studio.vercel.app', // Main Vercel deployment
+    'milan-pilates-studio-45u6hy3uz-darios-projects-1e6da2f9.vercel.app', // Temporary Vercel preview deployment
     'http://localhost:3000' // Local development
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
