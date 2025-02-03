@@ -77,7 +77,7 @@ const TestsScreen = () => {
 
 
     try {
-      const response = await fetch("https://milan-pilates-studio.vercel.app/api/tests/run-tests", {
+      const response = await fetch("milan-pilates-studio.vercel.app/api/tests/run-tests", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
