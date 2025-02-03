@@ -15,12 +15,11 @@ export default function handler(req, res) {
 
   res.setHeader("Access-Control-Allow-Origin", "*");
 
-  // מסלול לקבצי הבדיקות
   const testPath = path.join(process.cwd(), 'src/tests');
 
-  exec(`npx jest ${testPath} --json --ci`, (error, stdout) => {
+  exec(`npx jest ${testPath} --ci --json`, (error, stdout) => {
     if (error) {
-      console.error(`Test run error: ${error}`);
+      console.error(`Test run error: ${error.message}`);
       return res.status(500).json({ error: `Failed to run tests: ${error.message}` });
     }
 
