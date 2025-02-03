@@ -28,7 +28,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-scripts build",
+    "build": "set EXTEND_ESLINT=false && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -36,7 +36,6 @@
     "extends": [
       "react-app",
       "react-app/jest"
-      
     ]
   },
   "browserslist": {
