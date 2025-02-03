@@ -1,22 +1,19 @@
 const express = require('express');
 const cors = require('cors');
-const testRoutes = require('../../../server/routes/tests');
+const testRoutes = require('./tests'); // Adjusted path
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-// Update the CORS configuration
 app.use(cors({
   origin: [
-    'https://milan-pilates-studio.vercel.app', // Main Vercel deployment
-    'https://milan-pilates-studio-45u6hy3uz-darios-projects-1e6da2f9.vercel.app', // Temporary Vercel preview deployment
-    'http://localhost:3000' // Local development
+    'https://milan-pilates-studio.vercel.app', // Production
+    /\.vercel\.app$/, // Allow Vercel preview deployments
+    'http://localhost:3000' // Development
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
 
-// Explicitly handle preflight requests
 app.options('*', cors());
 
 app.use(express.json());
@@ -35,11 +32,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err) => {
-  console.error('Unhandled Rejection:', err);
-});
+// Export as a Vercel serverless function
+module.exports = app;

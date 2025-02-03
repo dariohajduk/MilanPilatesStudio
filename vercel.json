@@ -1,8 +1,9 @@
 {
-  "rewrites": [
+  "version": 2,
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://milan-pilates-studio.vercel.app/api/$1"
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
     }
   ]
 }
