@@ -5,18 +5,18 @@ const testRoutes = require('./routes/tests');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configure CORS with OPTIONS included
+// Update the CORS configuration
 app.use(cors({
   origin: [
-    'https://milan-pilates-studio.vercel.app',
-    'http://localhost:3001',
-    'http://localhost:3000'
+    'https://milan-pilates-studio.vercel.app', // Main Vercel deployment
+    'https://milan-pilates-studio-45u6hy3uz-darios-projects-1e6da2f9.vercel.app', // Temporary Vercel preview deployment
+    'http://localhost:3000' // Local development
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   credentials: true
 }));
 
-// Explicitly handle OPTIONS requests (preflight)
+// Explicitly handle preflight requests
 app.options('*', cors());
 
 app.use(express.json());
