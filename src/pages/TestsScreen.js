@@ -75,7 +75,7 @@ const TestsScreen = () => {
     setTestResults(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/tests/run-tests', {
+      const response = await fetch(process.env.REACT_APP_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
