@@ -23,7 +23,7 @@ const TestStatus = ({ passed, failed, total }) => (
 
 const TestSuite = ({ suite }) => {
   const isPassed = suite.status === 'passed';
-  
+
   return (
     <div className="border rounded-lg p-4 mb-4">
       <div className="flex justify-between items-center mb-3">
@@ -35,7 +35,6 @@ const TestSuite = ({ suite }) => {
         </span>
       </div>
 
-      {/* Test Details */}
       {suite.assertionResults?.map((test, index) => (
         <div 
           key={index}
@@ -51,8 +50,7 @@ const TestSuite = ({ suite }) => {
             }`} />
             <span>{test.title}</span>
           </div>
-          
-          {/* Show Error Message for Failed Tests */}
+
           {test.status === 'failed' && test.failureMessages?.map((message, i) => (
             <div key={i} className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
               {message.split('\n')[0]}
@@ -69,21 +67,30 @@ const TestsScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
   const fetchTestResults = async () => {
     setIsLoading(true);
     setError(null);
     setTestResults(null);
 
     try {
-      const response = await fetch('${process.env.REACT_APP_API_URL}/api/tests/run-tests', {
+      const response = await fetch(`${API_URL}/api/tests/run-tests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         }
       });
 
-      const data = await response.json();
-      
+      // Handle empty response to avoid JSON parsing error
+      const text = await response.text();
+      let data;
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        throw new Error('Invalid JSON response from server');
+      }
+
       if (!response.ok) {
         throw new Error(data.details || data.error || 'Server error occurred');
       }
@@ -98,7 +105,6 @@ const TestsScreen = () => {
     }
   };
 
-  // Calculate test statistics
   const getTestStats = () => {
     if (!testResults) return { total: 0, passed: 0, failed: 0 };
 
@@ -111,7 +117,6 @@ const TestsScreen = () => {
 
   return (
     <div className="relative min-h-screen">
-      {/* Sticky Header */}
       <div className="sticky top-0 bg-white shadow-md z-50 p-4 border-b">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">ניהול בדיקות (Jest)</h1>
@@ -128,6 +133,7 @@ const TestsScreen = () => {
           </button>
         </div>
       </div>
+
       <div className="container mx-auto p-4">
         {isLoading && (
           <div className="flex justify-center items-center p-8">
@@ -139,11 +145,6 @@ const TestsScreen = () => {
         {error && (
           <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6">
             <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
               <div className="mr-3">
                 <p className="font-bold">שגיאה בהרצת הבדיקות</p>
                 <p className="text-sm">{error}</p>
@@ -155,7 +156,6 @@ const TestsScreen = () => {
         {!isLoading && !error && testResults && (
           <div>
             <TestStatus {...getTestStats()} />
-            
             <div className="space-y-4">
               {testResults.testResults?.map((suite, index) => (
                 <TestSuite key={index} suite={suite} />
@@ -171,9 +171,7 @@ const TestsScreen = () => {
         )}
       </div>
     </div>
-    
   );
 };
-
 
 export default TestsScreen;
